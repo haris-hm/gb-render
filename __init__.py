@@ -21,37 +21,12 @@ bl_info = {
 }
 
 import bpy
+from .gb_utils import *
+from .operators import RENDER_OT_render_pairs
+from .ui import MyAddonProperties, VIEW3D_PT_custom_panel
 
-# addon_add_object = bpy.data.texts['addon_add_object.py'].as_module()
-
-class MyAddonProperties(bpy.types.PropertyGroup):
-    target_object: bpy.props.PointerProperty(
-        name='Target Object',
-        type=bpy.types.Object,
-        description='Select an object'
-    )
-
-class VIEW3D_PT_custom_panel(bpy.types.Panel):
-    # Where to add panel in UI
-    bl_space_type = 'VIEW_3D' # 3D Viewport Area
-    bl_region_type = 'UI' # Sidebar region
+classes = [MyAddonProperties, RENDER_OT_render_pairs, VIEW3D_PT_custom_panel]
     
-    # Add labels
-    bl_category = 'Grease Bin Rendering'
-    bl_label = 'Grease Bin Rendering'
-    
-    def draw (self, context):
-        layout = self.layout
-        props = context.scene.my_addon_props
-        row = self.layout.row()
-        row.operator("mesh.primitive_cube_add", text="Add Cube")
-        row = self.layout.row()
-        layout.prop_search(props, 'target_object', bpy.data, 'objects', text='Pick Object')
-        layout.prop_search(props, 'target_object', bpy.data, 'objects', text='Pick Object')
-
-classes = [MyAddonProperties, VIEW3D_PT_custom_panel]
-
-
 def register():
     for c in classes:
         bpy.utils.register_class(c)
