@@ -21,21 +21,22 @@ bl_info = {
 }
 
 import bpy
+
 from .gb_utils import *
 from .operators import RENDER_OT_render_pairs
 from .ui import UIProperties, VIEW3D_PT_controls, WM_OT_parameter_tuning
 
-classes = [UIProperties, RENDER_OT_render_pairs, WM_OT_parameter_tuning, VIEW3D_PT_controls]
+CLASSES = [UIProperties, RENDER_OT_render_pairs, WM_OT_parameter_tuning, VIEW3D_PT_controls]
     
 def register():
-    for c in classes:
+    for c in CLASSES:
         bpy.utils.register_class(c)
 
         if hasattr(c, 'register') and callable(c.register):
             c.register()
     
 def unregister():
-    for c in reversed(classes):
+    for c in reversed(CLASSES):
         bpy.utils.unregister_class(c)
 
         if hasattr(c, 'unregister') and callable(c.unregister):

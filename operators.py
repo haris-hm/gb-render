@@ -1,4 +1,5 @@
 import bpy 
+
 from bpy.types import Operator, Scene, Context, Event
 from .gb_utils import *
 
@@ -41,7 +42,8 @@ class RENDER_OT_render_pairs(Operator):
     
     def modal(self, ctx: Context, event: Event):
         if event.type == 'TIMER':
-            if self.stop or len(self.frames) == 0:
+            # if self.stop or len(self.frames) == 0:
+            if True in (not self.frames, self.stop is True): 
                 bpy.app.handlers.render_pre.remove(self.pre)
                 bpy.app.handlers.render_post.remove(self.post)
                 bpy.app.handlers.render_cancel.remove(self.cancelled)

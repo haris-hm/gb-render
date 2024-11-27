@@ -1,8 +1,14 @@
 import bpy
+
 from bpy.props import *
 from bpy.types import PropertyGroup, Panel, Object, Context, Scene, Operator, Event
 
 class UIProperties(PropertyGroup):
+    bin: PointerProperty(
+        name = 'Bin',
+        type = Object,
+        description = 'Select the bin'
+    ) # type: ignore
 
     camera: PointerProperty(
         name = 'Camera',
@@ -56,9 +62,9 @@ class UIProperties(PropertyGroup):
 
     focal_length: IntProperty(
         name = 'Focal length',
-        default = 60,
+        default = 50,
         min = 1,
-        max = 90,
+        max = 150,
         subtype = 'DISTANCE_CAMERA'
     ) # type: ignore
 
@@ -76,6 +82,7 @@ class VIEW3D_PT_controls(Panel):
         props = ctx.scene.ui_properties
 
         layout.label(text="Select Objects:")
+        layout.prop_search(props, "bin", bpy.data, "objects", text="Bin")
         layout.prop_search(props, "camera", bpy.data, "objects", text="Camera")
         layout.prop_search(props, "camera_track", bpy.data, "objects", text="Cam Track")
         layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Bin Cutter")
