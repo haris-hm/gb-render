@@ -120,8 +120,8 @@ def create_frames(scene: Scene) -> list[RenderFrame]:
     curr_azimuth: int = 0
     curr_elevation: int = 0
     file_name_counter = 0
-    while curr_azimuth <= 360:
-        while curr_elevation <= max_elevation:
+    while curr_elevation <= max_elevation:
+        while curr_azimuth <= 360:
             scene_data: SceneData = SceneData(scene, curr_azimuth, curr_elevation, max_elevation, focal_length, liquid_level)
             print(f'Doing: {curr_elevation=}, {curr_azimuth=}')
 
@@ -141,9 +141,10 @@ def create_frames(scene: Scene) -> list[RenderFrame]:
                 scene_data
             ))
 
+            file_name_counter += 1
             curr_azimuth += azimuth_step
-            curr_elevation += elevation_step
 
-        curr_elevation = 0
+        curr_elevation += elevation_step
+        curr_azimuth = 0
 
     return frames
