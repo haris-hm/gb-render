@@ -12,14 +12,21 @@ class EngineType(Enum):
     EEVEE = 'BLENDER_EEVEE_NEXT'
     CYCLES = 'CYCLES'
 
+class CameraData():
+    def __init__(self, azimuth: int=0, elevation: int=0, focal_length: int=35):
+        self.__azimuth = azimuth
+        self.__elevation = elevation
+        self.__focal_length = focal_length  
+
 class RenderFrame():
-    def __init__(self, root_path: str, file_name: str, scene: Scene, type: FrameType, width: int=1920, height: int=1080, samples: int=1024):
+    def __init__(self, root_path: str, file_name: str, scene: Scene, type: FrameType, camera_data: CameraData=CameraData(), width: int=1920, height: int=1080, samples: int=1024):
         self.__filepath = os.path.join(root_path, f'{file_name}_{type.value}.png')
         self.__scene = scene
         self.__engine = EngineType.CYCLES if type == FrameType.RAW else EngineType.EEVEE
         self.__width = width
         self.__height = height
         self.__samples = samples if type == FrameType.RAW else None
+        self.__camera_data = camera_data
 
     def render(self):
         switch_engine(self.__scene, self.__engine, self.__width, self.__height, self.__samples)

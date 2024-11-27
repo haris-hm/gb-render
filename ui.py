@@ -59,7 +59,7 @@ class UIProperties(PropertyGroup):
         default = 60,
         min = 1,
         max = 90,
-        subtype = 'FACTOR'
+        subtype = 'DISTANCE_CAMERA'
     ) # type: ignore
 
 class VIEW3D_PT_controls(Panel):
@@ -81,10 +81,10 @@ class VIEW3D_PT_controls(Panel):
         layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Bin Cutter")
 
         row = self.layout.row()
-        row.operator("wm.parameter_tuning", text="Adjust Parameters")
+        row.operator("wm.parameter_tuning", text="Adjust Parameters", icon="SETTINGS")
 
         row = self.layout.row()
-        row.operator("render.render_pairs", text="Render Pairs")
+        row.operator("render.render_pairs", text="Render Pairs", icon="RENDER_RESULT")
 
     def register():
         Scene.ui_properties = bpy.props.PointerProperty(type=UIProperties)
@@ -105,18 +105,27 @@ class WM_OT_parameter_tuning(Operator):
         ui_properties = ctx.scene.ui_properties
         layout = self.layout
 
-        layout.label(text="Camera Movement:")
-        row = layout.box().row()
+        layout.label(text="Camera Movement (Extrinsic):")
+        box = layout.box()
+        row = box.row()
         row.label(text= "Azimuth Step:", icon = 'ARROW_LEFTRIGHT')
         row.prop(ui_properties, "azimuth_step")
 
-        row = layout.box().row()
+        row = box.row()
         row.label(text= "Elevation Step:", icon = 'EVENT_UP_ARROW')
         row.prop(ui_properties, "elevation_step")
 
-        row = layout.box().row()
+        row = box.row()
         row.label(text= "Max Elevation", icon = 'EMPTY_SINGLE_ARROW')
         row.prop(ui_properties, "max_elevation")
+
+        layout.separator(factor= 1)
+
+        layout.label(text="Camera Properties (Intrinsic):")
+        box = layout.box()
+        row = box.row()
+        row.label(text= "Focal Length", icon = 'VIEW_CAMERA')
+        row.prop(ui_properties, "focal_length")
 
     def execute(self, ctx: Context):
         return {"FINISHED"}
