@@ -23,21 +23,23 @@ bl_info = {
 import bpy
 from .gb_utils import *
 from .operators import RENDER_OT_render_pairs
-from .ui import MyAddonProperties, VIEW3D_PT_custom_panel
+from .ui import UIProperties, VIEW3D_PT_controls, WM_OT_parameter_tuning
 
-classes = [MyAddonProperties, RENDER_OT_render_pairs, VIEW3D_PT_custom_panel]
+classes = [UIProperties, RENDER_OT_render_pairs, WM_OT_parameter_tuning, VIEW3D_PT_controls]
     
 def register():
     for c in classes:
         bpy.utils.register_class(c)
 
-    bpy.types.Scene.my_addon_props = bpy.props.PointerProperty(type=MyAddonProperties)
+        if hasattr(c, 'register') and callable(c.register):
+            c.register()
     
 def unregister():
     for c in reversed(classes):
         bpy.utils.unregister_class(c)
 
-    del bpy.types.Scene.my_addon_props
+        if hasattr(c, 'unregister') and callable(c.unregister):
+            c.register()
     
 if __name__ == '__main__':
     register()
