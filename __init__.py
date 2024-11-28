@@ -23,7 +23,7 @@ bl_info = {
 import bpy
 
 from .gb_utils import *
-from .operators import RENDER_OT_render_pairs
+from .rendering import RENDER_OT_render_pairs
 from .ui import UIProperties, VIEW3D_PT_controls, WM_OT_parameter_tuning
 
 CLASSES = [UIProperties, RENDER_OT_render_pairs, WM_OT_parameter_tuning, VIEW3D_PT_controls]

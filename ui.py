@@ -3,6 +3,21 @@ import bpy
 from bpy.props import *
 from bpy.types import PropertyGroup, Panel, Object, Context, Scene, Operator, Event
 
+def update_render_btn(self, ctx: Context):
+    azimuth_step = self.azimuth_step
+    elevation_step = self.elevation_step
+    max_elevation = self.max_elevation
+
+    estimate = (360/azimuth_step) * (max_elevation/elevation_step)
+    print(int(round(estimate)), estimate)
+    self.render_estimate = int(round(estimate))
+
+    for area in ctx.screen.areas:
+        if area.type == 'VIEW_3D':
+            for region in area.regions:
+                if region.type == 'UI':
+                    region.tag_redraw()
+
 class UIProperties(PropertyGroup):
     bin: PointerProperty(
         name = 'Bin',
@@ -41,7 +56,8 @@ class UIProperties(PropertyGroup):
         default = 10,
         min = 1,
         max = 360,
-        subtype = 'FACTOR'
+        subtype = 'FACTOR',
+        update = update_render_btn
     ) # type: ignore
 
     elevation_step: IntProperty(
@@ -49,7 +65,8 @@ class UIProperties(PropertyGroup):
         default = 10,
         min = 1,
         max = 360,
-        subtype = 'FACTOR'
+        subtype = 'FACTOR',
+        update = update_render_btn
     ) # type: ignore
 
     max_elevation: IntProperty(
@@ -57,7 +74,8 @@ class UIProperties(PropertyGroup):
         default = 60,
         min = 1,
         max = 90,
-        subtype = 'FACTOR'
+        subtype = 'FACTOR',
+        update = update_render_btn
     ) # type: ignore
 
     focal_length: IntProperty(
@@ -67,6 +85,22 @@ class UIProperties(PropertyGroup):
         max = 150,
         subtype = 'DISTANCE_CAMERA'
     ) # type: ignore
+
+    render_estimate: IntProperty(
+        name="Render Estimate",
+        default=int(round((360/10) * (90/10)))
+    ) # type: ignore
+
+    render_queue_settings: EnumProperty(
+        items = [
+            ('pairs', 'Pairs', 'The raw image is rendered, subsequently followed by rendering the mask image', '', 0),
+            ('mask_then_image', 'Masks then Images', 'All masks are rendered, followed by all images', '', 1),
+            ('image_only', 'Images Only', 'Only the images are rendered', '', 2),
+            ('mask_only', 'Masks Only', 'Only the masks are rendered', '', 3)
+        ],
+        name = "Render Queue Settings",
+        default = 'mask_then_image'
+    )  # type: ignore
 
 class VIEW3D_PT_controls(Panel):
     # Where to add panel in UI
@@ -87,11 +121,13 @@ class VIEW3D_PT_controls(Panel):
         layout.prop_search(props, "camera_track", bpy.data, "objects", text="Cam Track")
         layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Bin Cutter")
 
+        layout.prop(props, 'render_queue_settings')
+
         row = self.layout.row()
         row.operator("wm.parameter_tuning", text="Adjust Parameters", icon="SETTINGS")
 
         row = self.layout.row()
-        row.operator("render.render_pairs", text="Render Pairs", icon="RENDER_RESULT")
+        row.operator("render.render_pairs", text=f'Render Pairs ({props.render_estimate} Images)', icon="RENDER_RESULT")
 
     def register():
         Scene.ui_properties = bpy.props.PointerProperty(type=UIProperties)
