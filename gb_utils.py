@@ -3,7 +3,6 @@ import os
 
 from bpy.types import Scene, Object
 from enum import Enum
-from .ui import UIProperties
 
 class FrameType(Enum):
     MASK = 'mask'
@@ -17,7 +16,7 @@ class SceneData():
     __camera: Object = None
     __camera_track: Object = None
     __bin_cutter: Object = None
-    __bin: Object = None
+    __grease: Object = None
 
     def __init__(self, scene: Scene, azimuth: int=0, elevation: int=0, max_elevation: int=90, focal_length: int=35, liquid_level:int=100):
         self.__scene = scene
@@ -30,15 +29,19 @@ class SceneData():
         self.__get_scene_objects()
 
     def setup_scene(self):
+        bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
+
         self.__camera.constraints["Follow Path"].offset_factor = self.__azimuth/360
         self.__camera_track.location.z += 1/self.__elevation if self.__elevation > 0 else 0
+        self.__camera.data.lens = self.__focal_length
+        self.__bin_cutter.location.z = bin_cutter_location
 
     def __get_scene_objects(self):
         objects = get_objects(self.__scene)
         self.__camera = objects['camera']
         self.__camera_track = objects['camera_track']
         self.__bin_cutter = objects['bin_cutter']
-        self.__bin = objects['bin']
+        self.__grease = objects['grease']
 
 class RenderFrame():
     def __init__(self, root_path: str, file_name: str, scene: Scene, type: FrameType, scene_data: SceneData, width: int=1920, height: int=1080, samples: int=1024):
@@ -142,7 +145,7 @@ def get_objects(scene: Scene) -> dict[str, Object]:
         'camera':       ui_props.camera,
         'camera_track': ui_props.camera_track,
         'bin_cutter':   ui_props.bin_cutter,
-        'bin':          ui_props.bin
+        'grease':       ui_props.grease
     }
     
     # Object Validation
@@ -155,9 +158,9 @@ def get_objects(scene: Scene) -> dict[str, Object]:
     elif(objects['bin_cutter'] == None or objects['bin_cutter'].type != 'MESH'):
         objects['bin_cutter'] = None
         raise Exception('Invalid bin cutter object. Please pick a mesh object.')
-    elif(objects['bin'] == None or objects['bin'].type != 'MESH'):
-        objects['bin'] = None
-        raise Exception('Invalid bin object. Please pick a mesh object.')
+    elif(objects['grease'] == None or objects['grease'].type != 'MESH'):
+        objects['grease'] = None
+        raise Exception('Invalid grease object. Please pick a mesh object.')
     
     # Constraint Validation
     try: 

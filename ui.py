@@ -19,7 +19,7 @@ def update_render_btn(self, ctx: Context):
                     region.tag_redraw()
 
 class UIProperties(PropertyGroup):
-    bin: PointerProperty(
+    grease: PointerProperty(
         name = 'Bin',
         type = Object,
         description = 'Select the bin',
@@ -152,7 +152,7 @@ class VIEW3D_PT_objects(Panel):
         props = ctx.scene.ui_properties
 
         layout.label(text="Select Objects:")
-        layout.prop_search(props, "bin", bpy.data, "objects", text="Bin")
+        layout.prop_search(props, "grease", bpy.data, "objects", text="Bin")
         layout.prop_search(props, "camera", bpy.data, "objects", text="Camera")
         layout.prop_search(props, "camera_track", bpy.data, "objects", text="Cam Track")
         layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Bin Cutter")
@@ -197,6 +197,14 @@ class WM_OT_parameter_tuning(Operator):
     def draw(self, ctx: Context):
         props = ctx.scene.ui_properties
         layout = self.layout
+
+        layout.label(text="Camera Movement (Extrinsic):")
+        box = layout.box()
+        row = box.row()
+        row.label(text="Liquid Level:", icon='DOT')
+        row.prop(props, 'liquid_level')
+
+        layout.separator(factor= 1)
 
         layout.label(text="Camera Movement (Extrinsic):")
         box = layout.box()
