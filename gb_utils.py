@@ -40,11 +40,11 @@ class SceneData():
         self.__camera_track = objects['camera_track']
         self.__bin_cutter = objects['bin_cutter']
         self.__grease = objects['grease']
-        self.__bin_cutter_location = 1-self.__grease.dimensions.z*(self.__liquid_level*.01)
+        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
 
 class RenderFrame():
     def __init__(self, root_path: str, file_name: str, scene: Scene, type: FrameType, scene_data: SceneData, width: int=1920, height: int=1080, samples: int=1024):
-        self.__filepath = os.path.join(root_path, f'{file_name}_{type.value}.png')
+        self.__filepath = os.path.join(root_path, f'{file_name}.png')
         self.__scene = scene
         self.__engine = EngineType.CYCLES if type == FrameType.RAW else EngineType.EEVEE
         self.__type = type
@@ -58,7 +58,6 @@ class RenderFrame():
         self.__scene_data.setup_scene()
         self.__scene.render.filepath = self.__filepath
         bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
-        # self.__scene.render()
 
     def get_type(self) -> FrameType:
         return self.__type
@@ -91,6 +90,7 @@ class RenderQueue():
     def __init__(self, *items: RenderFrame):
         self.__queue: list[RenderFrame] = []
         self.__length: int = 0
+        self.__full_length: int = 0
         self.__curr_frame: int = 0
         for item in items:
             self.add(item)
@@ -98,6 +98,7 @@ class RenderQueue():
     def add(self, item):
         self.__queue.append(item)
         self.__length += 1
+        self.__full_length += 1
         return self
 
     def pop(self):
@@ -108,6 +109,7 @@ class RenderQueue():
 
             if len(self) == 0:
                 self.__curr_frame = 0
+                self.__full_length = 0
                 self.__queue = []
 
             return curr_frame
@@ -119,6 +121,12 @@ class RenderQueue():
         for i in self.__queue:
             copy.add(i)
         return copy
+    
+    def full_length(self):
+        return self.__full_length
+    
+    def current_frame(self):
+        return self.__curr_frame
         
     def __len__(self):
         return self.__length

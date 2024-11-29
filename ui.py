@@ -77,7 +77,7 @@ class UIProperties(PropertyGroup):
     max_elevation: IntProperty(
         name = 'Max Elevation',
         default = 60,
-        min = 1,
+        min = 0,
         max = 90,
         subtype = 'FACTOR',
         update = update_render_btn
@@ -142,6 +142,18 @@ class UIProperties(PropertyGroup):
         min = 1
     ) # type: ignore
 
+    render_progress: FloatProperty(
+        name = 'Render Progress',
+        min = 0,
+        max = 1,
+        update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
+    ) # type: ignore
+
+    show_render_progress: BoolProperty(
+        name = 'Show Render Progress',
+        default = False
+    ) # type: ignore
+
 class MaterialProperties(PropertyGroup):
     bin_int_mat: PointerProperty(
         name = 'Interior',
@@ -202,7 +214,6 @@ class VIEW3D_PT_materials(Panel):
 
     def draw(self, ctx: Context):
         layout = self.layout
-        props = ctx.scene.ui_properties
         mat_props = ctx.scene.material_properties
 
         layout.label(text="Select Materials:")
@@ -221,7 +232,7 @@ class VIEW3D_PT_materials(Panel):
         row.prop(mat_props, "grease_mat", text="Grease")
         self.display_nodes_for_mat(mat_props.grease_mat, mat_props.grease_group, "grease_group", mat_props, box)
 
-    def display_nodes_for_mat(self, material, group, group_name, props, layout):
+    def display_nodes_for_mat(self, material: Material, group: str, group_name: str, props: MaterialProperties, layout):
         # Display nodes only if a material is selected
         if material and material.use_nodes:
             node_tree = material.node_tree
@@ -276,10 +287,13 @@ class VIEW3D_PT_controls(Panel):
         row = box.row()
         row.operator("wm.render_settings", text="Adjust Render Settings", icon="SETTINGS")
 
-        layout.separator(factor= 1)
+        layout.separator(factor=1)
 
         row = self.layout.row()
         row.operator("render.render_queued_items", text=f'Render ({props.render_estimate} Images)', icon="RENDER_RESULT")
+        if props.show_render_progress == True:
+            row = self.layout.row()
+            row.progress(factor=props.render_progress)
 
     def register():
         Scene.ui_properties = bpy.props.PointerProperty(type=UIProperties)
@@ -366,8 +380,6 @@ class WM_OT_render_settings(Operator):
         row = layout.row()
         row.label(text='Render Sequence:')
         row.prop(props, 'render_sequence')
-        row.progress(factor=0.5)
-        row.progress(factor=0.8, type="RING", text="Updating")
 
     def execute(self, ctx: Context):
         return {"FINISHED"}

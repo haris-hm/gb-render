@@ -1,9 +1,9 @@
 import bpy 
-import threading
 
 from bpy.types import Operator, Scene, Context, Event
 from .gb_utils import *
 from .ui import UIProperties
+from time import sleep
 
 class RENDER_OT_render_queued_items(Operator):
     """
@@ -20,16 +20,9 @@ class RENDER_OT_render_queued_items(Operator):
     stop: bool = None
     rendering: bool = None
 
-    # @classmethod
-    # def poll(cls, ctx: Context):
-    #     try:
-    #         get_objects(ctx.scene)
-    #         return True
-    #     except:
-    #         return False
-
     def pre(self, scene: Scene, ctx: Context=None):
         self.rendering = True
+        self.pause = False
 
     def post(self, scene: Scene, ctx: Context=None):
         self.rendering = False
@@ -40,6 +33,7 @@ class RENDER_OT_render_queued_items(Operator):
     def execute(self, ctx: Context):
         self.stop = False
         self.rendering = False
+        props = ctx.scene.ui_properties
 
         try:
             get_objects(ctx.scene)
@@ -51,6 +45,12 @@ class RENDER_OT_render_queued_items(Operator):
             return {"CANCELLED"}
 
         self.frames = create_frames(ctx.scene)
+        print(self.frames)
+
+        # Render progress bar
+        props.show_render_progress = True
+        props.render_progress = 0.0
+        ctx.area.tag_redraw()
 
         bpy.app.handlers.render_pre.append(self.pre)
         bpy.app.handlers.render_post.append(self.post)
@@ -71,8 +71,13 @@ class RENDER_OT_render_queued_items(Operator):
                 
                 return {"FINISHED"}
             elif self.rendering is False:
+                props = ctx.scene.ui_properties
+
                 try:
                     self.frames.pop().render()
+                    # Update progress bar
+                    props.render_progress = self.frames.current_frame()/self.frames.full_length() if self.frames.full_length() > 0 else 1.0
+                    ctx.area.tag_redraw()
                 except Exception as e:
                     self.report({"ERROR"}, str(e))
                     return {"CANCELLED"}
