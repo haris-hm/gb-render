@@ -18,11 +18,10 @@ class SceneData():
     __bin_cutter: Object = None
     __grease: Object = None
 
-    def __init__(self, scene: Scene, azimuth: int=0, elevation: int=0, max_elevation: int=90, focal_length: int=35, liquid_level:int=100):
+    def __init__(self, scene: Scene, azimuth: int=0, elevation: int=0, focal_length: int=35, liquid_level:int=100):
         self.__scene = scene
         self.__azimuth = azimuth
         self.__elevation = elevation
-        self.__max_elevation = max_elevation
         self.__focal_length = focal_length  
         self.__liquid_level = liquid_level
 

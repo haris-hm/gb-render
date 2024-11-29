@@ -101,6 +101,9 @@ def create_frames(scene: Scene) -> RenderQueue:
     sequence_setting: int = int(props.render_sequence)
     mask_prefix: str = props.mask_prefix
     image_prefix: str = props.image_prefix
+    sample_amount: int = props.sample_amount
+    width: int = props.width
+    height: int = props.height
 
     # Creating Directories
     if (not os.path.exists(mask_dir)):
@@ -119,13 +122,13 @@ def create_frames(scene: Scene) -> RenderQueue:
 
     while curr_elevation <= max_elevation:
         while curr_azimuth < 360:
-            scene_data: SceneData = SceneData(scene, curr_azimuth, curr_elevation, max_elevation, focal_length, liquid_level)
+            scene_data: SceneData = SceneData(scene, curr_azimuth, curr_elevation, focal_length, liquid_level)
             mask_file_name = f'{mask_prefix}_{file_name_counter:>08}'
             image_file_name = f'{image_prefix}_{file_name_counter:>08}'
             print(f'Doing: {curr_elevation=}, {curr_azimuth=}')
 
-            image = RenderFrame(image_dir, image_file_name, scene, FrameType.RAW, scene_data, samples=1)
-            mask = RenderFrame(mask_dir, mask_file_name, scene, FrameType.MASK, scene_data)
+            image = RenderFrame(image_dir, image_file_name, scene, FrameType.RAW, scene_data, width=width, height=height, samples=sample_amount)
+            mask = RenderFrame(mask_dir, mask_file_name, scene, FrameType.MASK, scene_data, width=width, height=height)
 
             image_frames.add(image)
             mask_frames.add(mask)
