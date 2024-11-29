@@ -22,11 +22,16 @@ bl_info = {
 
 import bpy
 
-from .gb_utils import *
-from .rendering import RENDER_OT_render_pairs
-from .ui import UIProperties, VIEW3D_PT_controls, WM_OT_parameter_tuning
+from . import ui, rendering
 
-CLASSES = [UIProperties, RENDER_OT_render_pairs, WM_OT_parameter_tuning, VIEW3D_PT_controls]
+CLASSES = (
+    ui.UIProperties, 
+    rendering.RENDER_OT_render_queued_items, 
+    ui.WM_OT_parameter_tuning, 
+    ui.WM_OT_render_settings,
+    ui.VIEW3D_PT_objects, 
+    ui.VIEW3D_PT_controls
+)
     
 def register():
     for c in CLASSES:

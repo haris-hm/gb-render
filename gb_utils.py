@@ -45,6 +45,7 @@ class RenderFrame():
         self.__filepath = os.path.join(root_path, f'{file_name}_{type.value}.png')
         self.__scene = scene
         self.__engine = EngineType.CYCLES if type == FrameType.RAW else EngineType.EEVEE
+        self.__type = type
         self.__width = width
         self.__height = height
         self.__samples = samples if type == FrameType.RAW else None
@@ -55,6 +56,9 @@ class RenderFrame():
         self.__scene_data.setup_scene()
         self.__scene.render.filepath = self.__filepath
         bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)  
+
+    def get_type(self) -> FrameType:
+        return self.__type
 
     def __toggle_shadows(self, val: bool):
         for obj in self.__scene.objects:
@@ -81,17 +85,17 @@ class RenderFrame():
             self.__scene.view_settings.view_transform = 'Raw'
 
 class RenderQueue():
-    __queue: list[RenderFrame] = []
-    __length: int = 0
-    __curr_frame: int = 0
-
     def __init__(self, *items: RenderFrame):
+        self.__queue: list[RenderFrame] = []
+        self.__length: int = 0
+        self.__curr_frame: int = 0
         for item in items:
             self.add(item)
 
     def add(self, item):
         self.__queue.append(item)
         self.__length += 1
+        return self
 
     def pop(self):
         if len(self) > 0:
@@ -107,14 +111,30 @@ class RenderQueue():
         else:
             raise IndexError('This RenderQueue does not have any items.')
         
+    def copy(self):
+        copy = RenderQueue()
+        for i in self.__queue:
+            copy.add(i)
+        return copy
+        
     def __len__(self):
         return self.__length
         
     def __add__(self, other):
-        while len(other) > 0:
-            self.add(other.pop())
+        self_copy = self.copy()
+        other_copy = other.copy()
+        while len(other_copy) > 0:
+            self_copy.add(other_copy.pop())
+        return self_copy
+    
+    def __repr__(self):
+        repr_str: str = '['
+        for i in self.__queue:
+            repr_str += f'{i.get_type().value}, '
 
-        return self
+        repr_str = repr_str.removesuffix(', ')
+        repr_str += ']'
+        return repr_str
 
 def get_objects(scene: Scene) -> dict[str, Object]:
     ui_props = scene.ui_properties
