@@ -17,6 +17,7 @@ class SceneData():
     __camera_track: Object = None
     __bin_cutter: Object = None
     __grease: Object = None
+    __bin_cutter_location: float = 0
 
     def __init__(self, scene: Scene, azimuth: int=0, elevation: int=0, focal_length: int=35, liquid_level:int=100):
         self.__scene = scene
@@ -28,12 +29,10 @@ class SceneData():
         self.__get_scene_objects()
 
     def setup_scene(self):
-        bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
-
         self.__camera.constraints["Follow Path"].offset_factor = self.__azimuth/360
         self.__camera_track.location.z += 1/self.__elevation if self.__elevation > 0 else 0
         self.__camera.data.lens = self.__focal_length
-        self.__bin_cutter.location.z = bin_cutter_location
+        self.__bin_cutter.location.z = self.__bin_cutter_location
 
     def __get_scene_objects(self):
         objects = get_objects(self.__scene)
@@ -41,6 +40,7 @@ class SceneData():
         self.__camera_track = objects['camera_track']
         self.__bin_cutter = objects['bin_cutter']
         self.__grease = objects['grease']
+        self.__bin_cutter_location = 1-self.__grease.dimensions.z*(self.__liquid_level*.01)
 
 class RenderFrame():
     def __init__(self, root_path: str, file_name: str, scene: Scene, type: FrameType, scene_data: SceneData, width: int=1920, height: int=1080, samples: int=1024):
@@ -57,7 +57,8 @@ class RenderFrame():
         self.__switch_engine()
         self.__scene_data.setup_scene()
         self.__scene.render.filepath = self.__filepath
-        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)  
+        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
+        # self.__scene.render()
 
     def get_type(self) -> FrameType:
         return self.__type

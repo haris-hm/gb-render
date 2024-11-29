@@ -1,7 +1,7 @@
 import bpy
 
 from bpy.props import *
-from bpy.types import PropertyGroup, Panel, Object, Context, Scene, Operator, Event
+from bpy.types import PropertyGroup, Panel, Object, Context, Scene, Operator, Event, Node, Material
 
 def update_render_btn(self, ctx: Context):
     azimuth_step = self.azimuth_step
@@ -9,7 +9,9 @@ def update_render_btn(self, ctx: Context):
     max_elevation = self.max_elevation
 
     estimate = (360/azimuth_step) * ((max_elevation/elevation_step)+1)
-    print(int(round(estimate)), estimate)
+    if (int(self.render_sequence) == 0 or int(self.render_sequence) == 1):
+        estimate *= 2
+
     self.render_estimate = int(round(estimate))
 
     for area in ctx.screen.areas:
@@ -17,7 +19,6 @@ def update_render_btn(self, ctx: Context):
             for region in area.regions:
                 if region.type == 'UI':
                     region.tag_redraw()
-
 class UIProperties(PropertyGroup):
     grease: PointerProperty(
         name = 'Bin',
@@ -103,7 +104,8 @@ class UIProperties(PropertyGroup):
             ('3', 'Masks Only', 'Only the masks are rendered', '', 3)
         ],
         name = '',
-        default = '1'
+        default = '1',
+        update = update_render_btn
     )  # type: ignore
 
     directory: StringProperty(
@@ -140,6 +142,40 @@ class UIProperties(PropertyGroup):
         min = 1
     ) # type: ignore
 
+class MaterialProperties(PropertyGroup):
+    bin_int_mat: PointerProperty(
+        name = 'Interior',
+        type = Material,
+        description = 'Select the bin interior material'
+    ) # type: ignore
+
+    bin_ext_mat: PointerProperty(
+        name = 'Exterior',
+        type = Material,
+        description = 'Select the bin exterior material'
+    ) # type: ignore
+
+    grease_mat: PointerProperty(
+        name = 'Grease',
+        type = Material,
+        description = 'Select the grease material'
+    ) # type: ignore
+
+    grease_group: bpy.props.StringProperty(
+        name="Group",
+        description="Select the grease node group"
+    ) # type: ignore
+
+    bin_ext_group: bpy.props.StringProperty(
+        name="Group",
+        description="Select the bin node group"
+    ) # type: ignore
+
+    bin_int_group: bpy.props.StringProperty(
+        name="Group",
+        description="Select the bin node group"
+    ) # type: ignore
+
 class VIEW3D_PT_objects(Panel):
     bl_idname = "VIEW3D_PT_objects"
     bl_label = "Objects"
@@ -156,6 +192,71 @@ class VIEW3D_PT_objects(Panel):
         layout.prop_search(props, "camera", bpy.data, "objects", text="Camera")
         layout.prop_search(props, "camera_track", bpy.data, "objects", text="Cam Track")
         layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Bin Cutter")
+
+class VIEW3D_PT_materials(Panel):
+    bl_idname = "VIEW3D_PT_materials"
+    bl_label = "Materials"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Grease Bin Rendering"
+
+    def draw(self, ctx: Context):
+        layout = self.layout
+        props = ctx.scene.ui_properties
+        mat_props = ctx.scene.material_properties
+
+        layout.label(text="Select Materials:")
+        box = layout.box()
+        row = box.row()
+        row.prop(mat_props, "bin_int_mat", text="Interior")
+        self.display_nodes_for_mat(mat_props.bin_int_mat, mat_props.bin_int_group, "bin_int_group", mat_props, box)
+
+        box = layout.box()
+        row = box.row()
+        row.prop(mat_props, "bin_ext_mat", text="Exterior")
+        self.display_nodes_for_mat(mat_props.bin_ext_mat, mat_props.bin_ext_group, "bin_ext_group", mat_props, box)
+        
+        box = layout.box()
+        row = box.row()
+        row.prop(mat_props, "grease_mat", text="Grease")
+        self.display_nodes_for_mat(mat_props.grease_mat, mat_props.grease_group, "grease_group", mat_props, box)
+
+    def display_nodes_for_mat(self, material, group, group_name, props, layout):
+        # Display nodes only if a material is selected
+        if material and material.use_nodes:
+            node_tree = material.node_tree
+            
+            # Populate a dropdown with node names from the material's node tree
+            node_names = [node.name for node in node_tree.nodes]
+            layout.prop_search(props, group_name, material.node_tree, "nodes")
+            
+            # Display node inputs once a node is selected
+            if group:
+                selected_node = self.get_selected_node(material.node_tree, group)
+                if selected_node:
+                    self.draw_node_inputs(layout, selected_node)
+
+    def get_selected_node(self, node_tree, node_name):
+        # Retrieve the selected node by name
+        for node in node_tree.nodes:
+            if node.name == node_name:
+                return node
+        return None
+
+    def draw_node_inputs(self, layout, node):
+        # Display the inputs of the selected node
+        for input_socket in node.inputs:
+            if input_socket.is_linked:  # If the socket is linked to other nodes
+                layout.label(text=f"{input_socket.name}: Linked")
+            else:
+                if hasattr(input_socket, 'default_value'):
+                    layout.prop(input_socket, "default_value", text=input_socket.name)
+    
+    def register():
+        Scene.material_properties = bpy.props.PointerProperty(type=MaterialProperties)
+
+    def unregister():
+        del Scene.material_properties
 
 class VIEW3D_PT_controls(Panel):
     bl_idname = "VIEW3D_PT_controls"
@@ -265,6 +366,8 @@ class WM_OT_render_settings(Operator):
         row = layout.row()
         row.label(text='Render Sequence:')
         row.prop(props, 'render_sequence')
+        row.progress(factor=0.5)
+        row.progress(factor=0.8, type="RING", text="Updating")
 
     def execute(self, ctx: Context):
         return {"FINISHED"}

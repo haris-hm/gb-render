@@ -1,4 +1,5 @@
 import bpy 
+import threading
 
 from bpy.types import Operator, Scene, Context, Event
 from .gb_utils import *
@@ -43,7 +44,7 @@ class RENDER_OT_render_queued_items(Operator):
         try:
             get_objects(ctx.scene)
 
-            if(not is_path_valid(ctx.scene.ui_properties.directory)):
+            if(not self.__is_path_valid(bpy.path.abspath(ctx.scene.ui_properties.directory))):
                 raise Exception('Please choose a valid path under "Adjust Render Settings"')
         except Exception as e:
             self.report({"ERROR"}, str(e))
@@ -78,11 +79,11 @@ class RENDER_OT_render_queued_items(Operator):
                 
         return {"PASS_THROUGH"}
     
-def is_path_valid(path) -> bool:
-    if (os.path.exists(path) and os.path.isdir(os.path.abspath(path)) and path != ''):
-        return True
-    else:
-        return False
+    def __is_path_valid(self, path) -> bool:
+        if (os.path.exists(path) and os.path.isdir(os.path.abspath(path)) and path != ''):
+            return True
+        else:
+            return False
 
 def create_frames(scene: Scene) -> RenderQueue:
     props: UIProperties = scene.ui_properties

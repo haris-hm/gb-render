@@ -26,10 +26,12 @@ from . import ui, rendering
 
 CLASSES = (
     ui.UIProperties, 
+    ui.MaterialProperties,
     rendering.RENDER_OT_render_queued_items, 
     ui.WM_OT_parameter_tuning, 
     ui.WM_OT_render_settings,
     ui.VIEW3D_PT_objects, 
+    ui.VIEW3D_PT_materials,
     ui.VIEW3D_PT_controls
 )
     
