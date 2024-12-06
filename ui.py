@@ -297,7 +297,15 @@ class VIEW3D_PT_controls(Panel):
 
         layout.separator(factor=1)
         row = self.layout.row()
-        row.operator("render.render_as_animation", text=f'Render as Animation ({props.render_estimate} Frames)', icon="RENDER_RESULT")
+        row.label(text='Rendering as Animation')
+
+        box = layout.box()
+        row = box.row()
+        row.operator("render.generate_keyframes", text=f'Generate Keyframes ({props.render_estimate//2} Frames)', icon="RENDER_RESULT")
+        row = box.row()
+        row.operator("render.render_masks", text=f'Render Masks ({props.render_estimate//2} Frames)', icon="RENDER_RESULT")
+        row = box.row()
+        row.operator("render.render_images", text=f'Render Images ({props.render_estimate//2} Frames)', icon="RENDER_RESULT")
 
     def register():
         Scene.ui_properties = bpy.props.PointerProperty(type=UIProperties)

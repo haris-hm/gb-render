@@ -205,13 +205,15 @@ class AnimationSequence():
         self.fully_rendered: bool = False
 
     def render_masks(self):
-        self.__switch_engine(EngineType.EEVEE)
+        self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_000000')
         self.rendered_masks = True
+        self.__switch_engine(EngineType.EEVEE)
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
 
     def render_images(self):
-        self.__switch_engine(EngineType.CYCLES)
+        self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_000000')
         self.fully_rendered = True
+        self.__switch_engine(EngineType.CYCLES)
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
 
     def __toggle_shadows(self, val: bool):
@@ -232,12 +234,10 @@ class AnimationSequence():
 
         # Toggle settings for rendering seg masks
         if engine == EngineType.CYCLES:
-            self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_000000')
             self.__scene.cycles.samples = self.__cfg.sample_amount
             self.__toggle_shadows(True)
             self.__scene.view_settings.view_transform = 'AgX'
         else:
-            self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_000000')
             self.__toggle_shadows(False)
             self.__scene.view_settings.view_transform = 'Raw'
 
