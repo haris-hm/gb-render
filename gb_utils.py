@@ -1,8 +1,10 @@
 import bpy
 import os
+import math
 
-from bpy.types import Scene, Object
+from bpy.types import Scene, Object, Context
 from enum import Enum
+from .ui import UIProperties
 
 class FrameType(Enum):
     MASK = 'mask'
@@ -29,10 +31,24 @@ class SceneData():
         self.__get_scene_objects()
 
     def setup_scene(self):
-        self.__camera.constraints["Follow Path"].offset_factor = self.__azimuth/360
-        self.__camera_track.location.z += 1/self.__elevation if self.__elevation > 0 else 0
+        # Setting elevation
+        self.__camera.constraints["Follow Path"].offset_factor = 0.25 + self.__elevation/360
+
+        # Setting azimuth
+        self.__camera_track.rotation_mode = 'XYZ'
+        self.__camera_track.rotation_euler[2] = math.radians(self.__azimuth)
+
+        # Other
         self.__camera.data.lens = self.__focal_length
         self.__bin_cutter.location.z = self.__bin_cutter_location
+
+    def generate_keyframe(self, frame_num: int):
+        self.setup_scene()
+
+        # Add keyframes for all objects
+        self.__camera.constraints["Follow Path"].keyframe_insert(data_path="offset_factor", frame=frame_num)
+        self.__camera_track.keyframe_insert(data_path="rotation_euler", index=2, frame=frame_num)
+        self.__bin_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
 
     def __get_scene_objects(self):
         objects = get_objects(self.__scene)
@@ -44,7 +60,7 @@ class SceneData():
 
 class RenderFrame():
     def __init__(self, root_path: str, file_name: str, scene: Scene, type: FrameType, scene_data: SceneData, width: int=1920, height: int=1080, samples: int=1024):
-        self.__filepath = os.path.join(root_path, f'{file_name}.png')
+        self.__filepath = os.path.join(root_path, file_name)
         self.__scene = scene
         self.__engine = EngineType.CYCLES if type == FrameType.RAW else EngineType.EEVEE
         self.__type = type
@@ -59,9 +75,12 @@ class RenderFrame():
         self.__scene.render.filepath = self.__filepath
         bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
 
+    def generate_keyframe(self, frame_num: int):
+        self.__scene_data.generate_keyframe(frame_num)
+
     def get_type(self) -> FrameType:
         return self.__type
-
+    
     def __toggle_shadows(self, val: bool):
         for obj in self.__scene.objects:
             if hasattr(obj, "visible_shadow"):
@@ -127,6 +146,13 @@ class RenderQueue():
     
     def current_frame(self):
         return self.__curr_frame
+    
+    def generate_keyframes(self, ctx: Context):
+        ctx.scene.frame_start = 1
+        ctx.scene.frame_end = len(self.__queue)
+
+        for i, frame in enumerate(self.__queue):
+            frame.generate_keyframe(i)
         
     def __len__(self):
         return self.__length
@@ -146,6 +172,74 @@ class RenderQueue():
         repr_str = repr_str.removesuffix(', ')
         repr_str += ']'
         return repr_str
+
+class RenderConfig():
+    def __init__(self, scene: Scene):
+        props: UIProperties = scene.ui_properties
+
+        # Scene Settings
+        self.liquid_level: int = props.liquid_level
+        self.azimuth_step: int = props.azimuth_step
+        self.elevation_step: int = props.elevation_step
+        self.max_elevation: int = props.max_elevation
+        self.focal_length: int = props.focal_length
+
+        # Render Settings
+        self.directory: str = bpy.path.abspath(props.directory)
+        self.mask_dir: str = os.path.join(self.directory, 'masks')
+        self.image_dir: str = os.path.join(self.directory, 'images')
+        self.sequence_setting: int = int(props.render_sequence)
+        self.mask_prefix: str = props.mask_prefix
+        self.image_prefix: str = props.image_prefix
+        self.sample_amount: int = props.sample_amount
+        self.width: int = props.width
+        self.height: int = props.height
+    
+class AnimationSequence():
+    def __init__(self, ctx: Context, frames: RenderQueue):
+        self.__scene: Scene = ctx.scene
+        self.__cfg: RenderConfig = RenderConfig(self.__scene)
+        self.__frames = frames
+        self.__frames.generate_keyframes(ctx)
+        self.rendered_masks: bool = False
+        self.fully_rendered: bool = False
+
+    def render_masks(self):
+        self.__switch_engine(EngineType.EEVEE)
+        self.rendered_masks = True
+        bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
+
+    def render_images(self):
+        self.__switch_engine(EngineType.CYCLES)
+        self.fully_rendered = True
+        bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
+
+    def __toggle_shadows(self, val: bool):
+        for obj in self.__scene.objects:
+            if hasattr(obj, "visible_shadow"):
+                obj.visible_shadow = val
+            else:
+                raise Exception('Invalid object.')
+
+    def __switch_engine(self, engine: EngineType):
+        if (self.__cfg.sample_amount == None and engine == EngineType.CYCLES):
+            raise Exception('Cycles must have a sample amount specified.')
+        
+        self.__scene.frame_current = 1
+        self.__scene.render.resolution_x = self.__cfg.width
+        self.__scene.render.resolution_y = self.__cfg.height
+        self.__scene.render.engine = engine.value
+
+        # Toggle settings for rendering seg masks
+        if engine == EngineType.CYCLES:
+            self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_000000')
+            self.__scene.cycles.samples = self.__cfg.sample_amount
+            self.__toggle_shadows(True)
+            self.__scene.view_settings.view_transform = 'AgX'
+        else:
+            self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_000000')
+            self.__toggle_shadows(False)
+            self.__scene.view_settings.view_transform = 'Raw'
 
 def get_objects(scene: Scene) -> dict[str, Object]:
     ui_props = scene.ui_properties

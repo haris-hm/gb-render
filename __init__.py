@@ -28,6 +28,7 @@ CLASSES = (
     ui.UIProperties, 
     ui.MaterialProperties,
     rendering.RENDER_OT_render_queued_items, 
+    rendering.RENDER_OT_render_as_animation,
     ui.WM_OT_parameter_tuning, 
     ui.WM_OT_render_settings,
     ui.VIEW3D_PT_objects, 

@@ -295,6 +295,10 @@ class VIEW3D_PT_controls(Panel):
             row = self.layout.row()
             row.progress(factor=props.render_progress)
 
+        layout.separator(factor=1)
+        row = self.layout.row()
+        row.operator("render.render_as_animation", text=f'Render as Animation ({props.render_estimate} Frames)', icon="RENDER_RESULT")
+
     def register():
         Scene.ui_properties = bpy.props.PointerProperty(type=UIProperties)
 
@@ -378,8 +382,10 @@ class WM_OT_render_settings(Operator):
         row.prop(props, 'sample_amount')
 
         row = layout.row()
-        row.label(text='Render Sequence:')
+        row.label(text='Render Sequence (Render Only)')
         row.prop(props, 'render_sequence')
+        row = layout.row()
+        row.label(text='Note: Render sequence settings only works when not rendering as an animation. Animations always render all masks, then all images.')
 
     def execute(self, ctx: Context):
         return {"FINISHED"}
