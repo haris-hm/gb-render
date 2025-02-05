@@ -352,7 +352,7 @@ class WM_OT_parameter_tuning(Operator):
         layout.label(text="Camera Properties (Intrinsic):")
         box = layout.box()
         row = box.row()
-        row.label(text= "Focal Length", icon = 'VIEW_CAMERA')
+        # row.label(text= "Focal Length", icon = 'VIEW_CAMERA')
         row.prop(props, "focal_length")
 
     def execute(self, ctx: Context):
