@@ -132,10 +132,10 @@ class AnimationSequence():
     def render(self, frame_type: FrameType):
         # Set file names and render engine accordingly
         if frame_type == FrameType.MASK:
-            self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_000000')
+            self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_')
             self.__switch_engine(EngineType.EEVEE)
         else:
-            self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_000000')
+            self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_')
             self.__switch_engine(EngineType.CYCLES)
         
         # Render the animation

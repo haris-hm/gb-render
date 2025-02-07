@@ -10,7 +10,7 @@ class VIEW3D_PT_objects(Panel):
     bl_label = "Objects"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Grease Bin Rendering"
+    bl_category = "GB-Render"
 
     def draw(self, ctx: Context):
         layout = self.layout
@@ -95,6 +95,8 @@ class VIEW3D_PT_materials(Panel):
 class WM_OT_parameter_tuning(Operator):
     bl_idname = 'wm.parameter_tuning'
     bl_label = 'Parameter Settings'
+    bl_description = "Adjust parameters for environment set up"
+    bl_options = {"REGISTER"}
 
     def invoke(self, ctx: Context, event: Event):
         wm = ctx.window_manager
@@ -146,6 +148,8 @@ class WM_OT_parameter_tuning(Operator):
 class WM_OT_render_settings(Operator):
     bl_idname = 'wm.render_settings'
     bl_label = 'Render Settings'
+    bl_description = "Adjust render settings"
+    bl_options = {"REGISTER"}
 
     def invoke(self, ctx: Context, event: Event):
         wm = ctx.window_manager
@@ -174,10 +178,8 @@ class WM_OT_render_settings(Operator):
         row.prop(props, 'sample_amount')
 
         row = layout.row()
-        row.label(text='Render Sequence (Render Only)')
+        row.label(text='Render Sequence')
         row.prop(props, 'render_sequence')
-        row = layout.row()
-        row.label(text='Note: Render sequence settings only works when not rendering as an animation. Animations always render all masks, then all images.')
 
     def execute(self, ctx: Context):
         return {"FINISHED"}

@@ -11,9 +11,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 bl_info = {
-    'name': 'Grease Bin Rendering',
+    'name': 'GB Render',
     'author': 'Haris Mehuljic',
-    'version': (0, 0, 1),
+    'version': (1,0,0),
     'blender': (4,2,0),
     'location': '3D Viewport > Sidebar > Grease Bin Rendering',
     'description': 'Provides a useful UI for adjusting parameters and rendering our grease bins.',
@@ -22,7 +22,7 @@ bl_info = {
 
 import bpy
 
-from . import rendering, ui_functionality, ui_elements
+from . import rendering, ui_elements, ui_layout
 
 CLASSES = (
     ui_elements.DataElements,
@@ -31,11 +31,11 @@ CLASSES = (
     ui_elements.ParameterSettingsElements,
     ui_elements.RenderSettingsElements,
     rendering.RENDER_OT_render,
-    ui_functionality.WM_OT_parameter_tuning, 
-    ui_functionality.WM_OT_render_settings,
-    ui_functionality.VIEW3D_PT_objects, 
-    ui_functionality.VIEW3D_PT_materials,
-    ui_functionality.VIEW3D_PT_controls
+    ui_layout.WM_OT_parameter_tuning, 
+    ui_layout.WM_OT_render_settings,
+    ui_layout.VIEW3D_PT_objects, 
+    ui_layout.VIEW3D_PT_materials,
+    ui_layout.VIEW3D_PT_controls
 )
     
 def register():

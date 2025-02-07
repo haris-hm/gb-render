@@ -1,7 +1,7 @@
 import bpy 
 
 from bpy.types import Operator, Scene, Context, Event
-from .gb_utils import *
+from .utils import *
     
 class RENDER_OT_render(Operator):
     """
