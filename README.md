@@ -1,6 +1,6 @@
 # GB-Render
 
-Addon designed to streamline the process of rendering grease bins for our research project.
+Addon designed to streamline the process of rendering grease bins for a research project.
 
 ## Installation
 1. Download the zip file from releases.
