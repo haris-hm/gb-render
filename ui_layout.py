@@ -33,7 +33,7 @@ class VIEW3D_PT_materials(Panel):
     bl_label = "Materials"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Grease Bin Rendering"
+    bl_category = "GB-Render"
 
     def draw(self, ctx: Context):
         layout = self.layout
@@ -195,7 +195,7 @@ class VIEW3D_PT_controls(Panel):
     bl_label = "Rendering"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Grease Bin Rendering"
+    bl_category = "GB-Render"
     
     def draw (self, ctx: Context):
         layout = self.layout
