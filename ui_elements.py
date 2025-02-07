@@ -188,12 +188,11 @@ class RenderSettingsElements(PropertyGroup):
 
     render_sequence: EnumProperty(
         items = [
-            ('0', 'Pairs', 'The raw image is rendered, subsequently followed by rendering the mask image', '', 0),
-            ('1', 'Masks then Images', 'All masks are rendered, followed by all images', '', 1),
-            ('2', 'Images Only', 'Only the images are rendered', '', 2),
-            ('3', 'Masks Only', 'Only the masks are rendered', '', 3)
+            ('0', 'Masks then Images', 'All masks are rendered, followed by all images', '', 0),
+            ('1', 'Images Only', 'Only the images are rendered', '', 1),
+            ('2', 'Masks Only', 'Only the masks are rendered', '', 2)
         ],
         name = '',
-        default = '1',
+        default = '0',
         update = update_render_btn
     )  # type: ignore

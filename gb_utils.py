@@ -126,21 +126,19 @@ class AnimationSequence():
     def __init__(self, ctx: Context, frames: RenderQueue):
         self.__scene: Scene = ctx.scene
         self.__cfg: RenderConfig = RenderConfig(self.__scene)
-        self.rendered_masks: bool = False
-        self.fully_rendered: bool = False
 
         self.__generate_keyframes(ctx, frames)
 
-    def render_masks(self):
-        self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_000000')
-        self.rendered_masks = True
-        self.__switch_engine(EngineType.EEVEE)
-        bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
-
-    def render_images(self):
-        self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_000000')
-        self.fully_rendered = True
-        self.__switch_engine(EngineType.CYCLES)
+    def render(self, frame_type: FrameType):
+        # Set file names and render engine accordingly
+        if frame_type == FrameType.MASK:
+            self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_000000')
+            self.__switch_engine(EngineType.EEVEE)
+        else:
+            self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_000000')
+            self.__switch_engine(EngineType.CYCLES)
+        
+        # Render the animation
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
 
     def __generate_keyframes(self, ctx: Context, frames: RenderQueue):
@@ -150,6 +148,8 @@ class AnimationSequence():
         for i in range(frames.max_length()):
             frame: FrameData = frames.pop()
             frame.generate_keyframe(i)
+
+        ctx.scene.gb_data.keyframes_generated = True
 
     def __toggle_shadows(self, val: bool):
         for obj in self.__scene.objects:
@@ -224,14 +224,12 @@ def create_frames(scene: Scene) -> RenderQueue:
 
     curr_azimuth: int = 0
     curr_elevation: int = 0
-    file_name_counter = 0
 
     while curr_elevation <= cfg.max_elevation:
         while curr_azimuth < 360:
             frame_data: FrameData = FrameData(scene, curr_azimuth, curr_elevation, cfg.focal_length, cfg.liquid_level)
             frames.add(frame_data)
 
-            file_name_counter += 1
             curr_azimuth += cfg.azimuth_step
 
         curr_elevation += cfg.elevation_step

@@ -2,15 +2,26 @@ import bpy
 
 from bpy.types import Operator, Scene, Context, Event
 from .gb_utils import *
+    
+class RENDER_OT_generate_keyframes(Operator):
+    bl_idname = "render.generate_keyframes"
+    bl_label = "Generate Keyframes"
+    bl_description = "Generates keyframes based on defined parameters"
+    bl_options = {"REGISTER", "UNDO"}
 
-class RENDER_OT_render_queued_items(Operator):
+    def execute(self, ctx: Context):
+        frames = create_frames(ctx.scene, True)
+        frames.generate_keyframes(ctx)        
+        return {"FINISHED"}
+    
+class RENDER_OT_render(Operator):
     """
     Adapted from: https://blender.stackexchange.com/a/71830    
     """
 
-    bl_idname = "render.render_queued_items"
-    bl_label = "Render Images"
-    bl_description = "Renders all images in the render queue. Make sure to select all relevant objects"
+    bl_idname = "render.render_generated_animation"
+    bl_label = "Render Animation"
+    bl_description = "Renders the animation based on current settings"
     bl_options = {"REGISTER"}
 
     timer = None
@@ -29,6 +40,17 @@ class RENDER_OT_render_queued_items(Operator):
         self.stop = True
 
     def execute(self, ctx: Context):
+        sequence_setting: int = int(ctx.scene.render_settings_elements.render_sequence)
+        frames = create_frames(ctx.scene, True)
+        animation = AnimationSequence(ctx, frames)       
+
+        if sequence_setting == 1:            
+            animation.render(FrameType.RAW)
+            return {"FINISHED"}
+        elif sequence_setting == 2:
+            animation.render(FrameType.MASK)
+            return {"FINISHED"}
+        
         self.stop = False
         self.rendering = False
         props = ctx.scene.ui_properties
@@ -87,26 +109,4 @@ class RENDER_OT_render_queued_items(Operator):
             return True
         else:
             return False
-class RENDER_OT_generate_keyframes(Operator):
-    bl_idname = "render.generate_keyframes"
-    bl_label = "Generate Keyframes"
-    bl_description = "Generates keyframes based on defined parameters"
-    bl_options = {"REGISTER", "UNDO"}
-
-    def execute(self, ctx: Context):
-        frames = create_frames(ctx.scene, True)
-        frames.generate_keyframes(ctx)        
-        return {"FINISHED"}
-    
-class RENDER_OT_render(Operator):
-    bl_idname = "render.render_images_then_masks"
-    bl_label = "Render Animation"
-    bl_description = "Renders the animation based on current settings"
-    bl_options = {"REGISTER"}
-
-    def execute(self, ctx: Context):
-        frames = create_frames(ctx.scene, True)
-        animation = AnimationSequence(ctx, frames)       
-        animation.render_images()
-        return {"FINISHED"}
-    
+        

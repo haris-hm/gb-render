@@ -143,7 +143,6 @@ class WM_OT_parameter_tuning(Operator):
     def unregister():
         del Scene.parameter_settings_elements
     
-    
 class WM_OT_render_settings(Operator):
     bl_idname = 'wm.render_settings'
     bl_label = 'Render Settings'
@@ -219,8 +218,11 @@ class VIEW3D_PT_controls(Panel):
         row = box.row()
         row.operator("render.generate_keyframes", text=f'Generate Keyframes (Frames)', icon="RENDER_RESULT")
         row = box.row()
-        row.operator("render.render_masks", text=f'Render Masks (Frames)', icon="RENDER_RESULT")
-        row = box.row()
-        row.operator("render.render_images", text=f'Render Images (Frames)', icon="RENDER_RESULT")
+        row.operator("render.render_generated_animation", text=f'Render Images (Frames)', icon="RENDER_RESULT")
 
+    def register():
+        Scene.gb_data = bpy.props.PointerProperty(type=DataElements)
+
+    def unregister():
+        del Scene.gb_data
     

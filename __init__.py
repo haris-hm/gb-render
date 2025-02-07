@@ -25,14 +25,13 @@ import bpy
 from . import rendering, ui_functionality, ui_elements
 
 CLASSES = (
+    ui_elements.DataElements,
     ui_elements.ObjectSelectionElements, 
     ui_elements.MaterialElements,
     ui_elements.ParameterSettingsElements,
     ui_elements.RenderSettingsElements,
-    rendering.RENDER_OT_render_queued_items, 
     rendering.RENDER_OT_generate_keyframes,
-    rendering.RENDER_OT_render_image_animation,
-    rendering.RENDER_OT_render_mask_animation,
+    rendering.RENDER_OT_render,
     ui_functionality.WM_OT_parameter_tuning, 
     ui_functionality.WM_OT_render_settings,
     ui_functionality.VIEW3D_PT_objects, 
