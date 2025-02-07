@@ -28,15 +28,17 @@ class DataElements(PropertyGroup):
 
 
 def update_render_btn(self, ctx: Context):
-    azimuth_step = self.azimuth_step
-    elevation_step = self.elevation_step
-    max_elevation = self.max_elevation
+    # Access properties from their respective classes
+    azimuth_step = ctx.scene.parameter_settings_elements.azimuth_step
+    elevation_step = ctx.scene.parameter_settings_elements.elevation_step
+    max_elevation = ctx.scene.parameter_settings_elements.max_elevation
+    render_sequence = ctx.scene.render_settings_elements.render_sequence
 
-    estimate = (360/azimuth_step) * ((max_elevation/elevation_step)+1)
-    if (int(self.render_sequence) == 0 or int(self.render_sequence) == 1):
+    estimate = (360 / azimuth_step) * ((max_elevation / elevation_step) + 1)
+    if int(render_sequence) == 0:
         estimate *= 2
 
-    self.render_estimate = int(round(estimate))
+    ctx.scene.gb_data.render_estimate = int(round(estimate))
 
     for area in ctx.screen.areas:
         if area.type == 'VIEW_3D':

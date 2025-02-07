@@ -70,7 +70,7 @@ class FrameData():
         self.__bin_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
 
     def __get_scene_objects(self):
-        objects = get_objects(self.__scene)
+        objects: dict[str, Object] = get_objects(self.__scene)
         self.__camera = objects['camera']
         self.__camera_track = objects['camera_track']
         self.__bin_cutter = objects['bin_cutter']
@@ -145,7 +145,12 @@ class AnimationSequence():
         ctx.scene.frame_start = 1
         ctx.scene.frame_end = frames.max_length()
 
-        for i in range(frames.max_length()):
+        # Clear old keyframes
+        for obj in get_objects(ctx.scene).values():
+            if obj.animation_data:
+                obj.animation_data_clear()
+
+        for i in range(1, frames.max_length()):
             frame: FrameData = frames.pop()
             frame.generate_keyframe(i)
 

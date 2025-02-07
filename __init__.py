@@ -30,7 +30,6 @@ CLASSES = (
     ui_elements.MaterialElements,
     ui_elements.ParameterSettingsElements,
     ui_elements.RenderSettingsElements,
-    rendering.RENDER_OT_generate_keyframes,
     rendering.RENDER_OT_render,
     ui_functionality.WM_OT_parameter_tuning, 
     ui_functionality.WM_OT_render_settings,

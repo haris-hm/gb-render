@@ -3,17 +3,6 @@ import bpy
 from bpy.types import Operator, Scene, Context, Event
 from .gb_utils import *
     
-class RENDER_OT_generate_keyframes(Operator):
-    bl_idname = "render.generate_keyframes"
-    bl_label = "Generate Keyframes"
-    bl_description = "Generates keyframes based on defined parameters"
-    bl_options = {"REGISTER", "UNDO"}
-
-    def execute(self, ctx: Context):
-        frames = create_frames(ctx.scene, True)
-        frames.generate_keyframes(ctx)        
-        return {"FINISHED"}
-    
 class RENDER_OT_render(Operator):
     """
     Adapted from: https://blender.stackexchange.com/a/71830    
@@ -25,52 +14,39 @@ class RENDER_OT_render(Operator):
     bl_options = {"REGISTER"}
 
     timer = None
-    frames: RenderQueue = None
+    animation: AnimationSequence = None
     stop: bool = None
     rendering: bool = None
-
-    def pre(self, scene: Scene, ctx: Context=None):
-        self.rendering = True
-        self.pause = False
-
-    def post(self, scene: Scene, ctx: Context=None):
-        self.rendering = False
-    
-    def cancelled(self, scene: Scene, ctx: Context=None):
-        self.stop = True
+    masks_rendered: bool = None
+    images_rendered: bool = None
 
     def execute(self, ctx: Context):
-        sequence_setting: int = int(ctx.scene.render_settings_elements.render_sequence)
-        frames = create_frames(ctx.scene, True)
-        animation = AnimationSequence(ctx, frames)       
-
-        if sequence_setting == 1:            
-            animation.render(FrameType.RAW)
-            return {"FINISHED"}
-        elif sequence_setting == 2:
-            animation.render(FrameType.MASK)
-            return {"FINISHED"}
-        
-        self.stop = False
-        self.rendering = False
-        props = ctx.scene.ui_properties
-
+        # Validate all relevant objects are selected and the selected directory is valid
         try:
             get_objects(ctx.scene)
-
-            if(not self.__is_path_valid(bpy.path.abspath(ctx.scene.ui_properties.directory))):
+            if(not self.__is_path_valid(bpy.path.abspath(ctx.scene.render_settings_elements.directory))):
                 raise Exception('Please choose a valid path under "Adjust Render Settings"')
         except Exception as e:
             self.report({"ERROR"}, str(e))
             return {"CANCELLED"}
 
-        self.frames = create_frames(ctx.scene)
-        print(self.frames)
+        # Create the animation keyframes based on settings
+        frames = create_frames(ctx.scene)
+        self.animation = AnimationSequence(ctx, frames)  
 
-        # Render progress bar
-        props.show_render_progress = True
-        props.render_progress = 0.0
-        ctx.area.tag_redraw()
+        # If rendering only masks or images
+        seq_code: int = int(ctx.scene.render_settings_elements.render_sequence)
+        print(seq_code)
+
+        if seq_code > 0:
+            self.__render(seq_code, self.animation) 
+        
+        # If rendering masks, then images
+        self.stop = False
+        self.rendering = False
+
+        self.masks_rendered = False
+        self.images_rendered = False
 
         bpy.app.handlers.render_pre.append(self.pre)
         bpy.app.handlers.render_post.append(self.post)
@@ -81,9 +57,19 @@ class RENDER_OT_render(Operator):
 
         return {"RUNNING_MODAL"}
     
+    def pre(self, scene: Scene, ctx: Context=None):
+        self.rendering = True
+        self.pause = False
+
+    def post(self, scene: Scene, ctx: Context=None):
+        self.rendering = False
+    
+    def cancelled(self, scene: Scene, ctx: Context=None):
+        self.stop = True
+    
     def modal(self, ctx: Context, event: Event):
         if event.type == 'TIMER':
-            if True in (not self.frames, self.stop is True): 
+            if True in (self.images_rendered, self.stop is True): 
                 bpy.app.handlers.render_pre.remove(self.pre)
                 bpy.app.handlers.render_post.remove(self.post)
                 bpy.app.handlers.render_cancel.remove(self.cancelled)
@@ -91,16 +77,12 @@ class RENDER_OT_render(Operator):
                 
                 return {"FINISHED"}
             elif self.rendering is False:
-                props = ctx.scene.ui_properties
-
-                try:
-                    self.frames.pop().render()
-                    # Update progress bar
-                    props.render_progress = self.frames.current_frame()/self.frames.full_length() if self.frames.full_length() > 0 else 1.0
-                    ctx.area.tag_redraw()
-                except Exception as e:
-                    self.report({"ERROR"}, str(e))
-                    return {"CANCELLED"}
+                if not self.masks_rendered:
+                    self.__render(2, self.animation)
+                    self.masks_rendered = True
+                else:
+                    self.__render(1, self.animation)
+                    self.images_rendered = True
                 
         return {"PASS_THROUGH"}
     
@@ -109,4 +91,12 @@ class RENDER_OT_render(Operator):
             return True
         else:
             return False
+        
+    def __render(self, seq_code: int, animation: AnimationSequence):
+        if seq_code == 1:            
+            animation.render(FrameType.RAW)
+            return {"FINISHED"}
+        elif seq_code == 2:
+            animation.render(FrameType.MASK)
+            return {"FINISHED"}
         

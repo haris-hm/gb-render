@@ -190,13 +190,14 @@ class WM_OT_render_settings(Operator):
     
 class VIEW3D_PT_controls(Panel):
     bl_idname = "VIEW3D_PT_controls"
-    bl_label = "Settings"
+    bl_label = "Rendering"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Grease Bin Rendering"
     
     def draw (self, ctx: Context):
         layout = self.layout
+        data = ctx.scene.gb_data
 
         box = layout.box()
         row = box.row()
@@ -206,19 +207,9 @@ class VIEW3D_PT_controls(Panel):
         row.operator("wm.render_settings", text="Adjust Render Settings", icon="SETTINGS")
 
         layout.separator(factor=1)
-
-        row = self.layout.row()
-        row.operator("render.render_queued_items", text=f'Render (Images)', icon="RENDER_RESULT")
-
-        layout.separator(factor=1)
-        row = self.layout.row()
-        row.label(text='Rendering as Animation')
-
         box = layout.box()
         row = box.row()
-        row.operator("render.generate_keyframes", text=f'Generate Keyframes (Frames)', icon="RENDER_RESULT")
-        row = box.row()
-        row.operator("render.render_generated_animation", text=f'Render Images (Frames)', icon="RENDER_RESULT")
+        row.operator("render.render_generated_animation", text=f'Render Images ({data.render_estimate//2} Frames)', icon="RENDER_RESULT")
 
     def register():
         Scene.gb_data = bpy.props.PointerProperty(type=DataElements)
