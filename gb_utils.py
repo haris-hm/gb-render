@@ -107,13 +107,13 @@ class RenderQueue():
         else:
             raise IndexError('This RenderQueue does not have any items.')
     
-    def max_length(self):
+    def max_length(self) -> int:
         return self.__max_len
         
-    def __len__(self):
+    def __len__(self) -> int:
         return self.__length
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         repr_str: str = '['
         for i in self.__queue:
             repr_str += f'{i.get_type().value}, '

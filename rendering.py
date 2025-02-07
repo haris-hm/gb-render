@@ -97,30 +97,6 @@ class RENDER_OT_generate_keyframes(Operator):
         frames = create_frames(ctx.scene, True)
         frames.generate_keyframes(ctx)        
         return {"FINISHED"}
-
-class RENDER_OT_render_mask_animation(Operator):
-    bl_idname = "render.render_masks"
-    bl_label = "Render Mask Animation"
-    bl_description = "Renders all masks as an animation"
-    bl_options = {"REGISTER"}
-
-    def execute(self, ctx: Context):
-        frames = create_frames(ctx.scene, True)
-        animation = AnimationSequence(ctx, frames)       
-        animation.render_masks()
-        return {"FINISHED"}
-    
-class RENDER_OT_render_image_animation(Operator):
-    bl_idname = "render.render_images"
-    bl_label = "Render Image Animation"
-    bl_description = "Renders all images as an animation"
-    bl_options = {"REGISTER"}
-
-    def execute(self, ctx: Context):
-        frames = create_frames(ctx.scene, True)
-        animation = AnimationSequence(ctx, frames)       
-        animation.render_images()
-        return {"FINISHED"}
     
 class RENDER_OT_render(Operator):
     bl_idname = "render.render_images_then_masks"
@@ -133,9 +109,4 @@ class RENDER_OT_render(Operator):
         animation = AnimationSequence(ctx, frames)       
         animation.render_images()
         return {"FINISHED"}
-
-
-
-    
-
     
