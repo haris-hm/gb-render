@@ -22,20 +22,22 @@ bl_info = {
 
 import bpy
 
-from . import ui, rendering
+from . import rendering, ui_functionality, ui_elements
 
 CLASSES = (
-    ui.UIProperties, 
-    ui.MaterialProperties,
+    ui_elements.ObjectSelectionElements, 
+    ui_elements.MaterialElements,
+    ui_elements.ParameterSettingsElements,
+    ui_elements.RenderSettingsElements,
     rendering.RENDER_OT_render_queued_items, 
     rendering.RENDER_OT_generate_keyframes,
     rendering.RENDER_OT_render_image_animation,
     rendering.RENDER_OT_render_mask_animation,
-    ui.WM_OT_parameter_tuning, 
-    ui.WM_OT_render_settings,
-    ui.VIEW3D_PT_objects, 
-    ui.VIEW3D_PT_materials,
-    ui.VIEW3D_PT_controls
+    ui_functionality.WM_OT_parameter_tuning, 
+    ui_functionality.WM_OT_render_settings,
+    ui_functionality.VIEW3D_PT_objects, 
+    ui_functionality.VIEW3D_PT_materials,
+    ui_functionality.VIEW3D_PT_controls
 )
     
 def register():

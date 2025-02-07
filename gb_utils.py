@@ -4,7 +4,6 @@ import math
 
 from bpy.types import Scene, Object, Context
 from enum import Enum
-from .ui import UIProperties
 
 class FrameType(Enum):
     MASK = 'mask'
@@ -175,25 +174,26 @@ class RenderQueue():
 
 class RenderConfig():
     def __init__(self, scene: Scene):
-        props: UIProperties = scene.ui_properties
+        param_props = scene.parameter_settings_elements
+        render_props = scene.render_settings_elements
 
         # Scene Settings
-        self.liquid_level: int = props.liquid_level
-        self.azimuth_step: int = props.azimuth_step
-        self.elevation_step: int = props.elevation_step
-        self.max_elevation: int = props.max_elevation
-        self.focal_length: int = props.focal_length
+        self.liquid_level: int = param_props.liquid_level
+        self.azimuth_step: int = param_props.azimuth_step
+        self.elevation_step: int = param_props.elevation_step
+        self.max_elevation: int = param_props.max_elevation
+        self.focal_length: int = param_props.focal_length
 
         # Render Settings
-        self.directory: str = bpy.path.abspath(props.directory)
+        self.directory: str = bpy.path.abspath(render_props.directory)
         self.mask_dir: str = os.path.join(self.directory, 'masks')
         self.image_dir: str = os.path.join(self.directory, 'images')
-        self.sequence_setting: int = int(props.render_sequence)
-        self.mask_prefix: str = props.mask_prefix
-        self.image_prefix: str = props.image_prefix
-        self.sample_amount: int = props.sample_amount
-        self.width: int = props.width
-        self.height: int = props.height
+        self.sequence_setting: int = int(render_props.render_sequence)
+        self.mask_prefix: str = render_props.mask_prefix
+        self.image_prefix: str = render_props.image_prefix
+        self.sample_amount: int = render_props.sample_amount
+        self.width: int = render_props.width
+        self.height: int = render_props.height
     
 class AnimationSequence():
     def __init__(self, ctx: Context, frames: RenderQueue):
@@ -242,12 +242,12 @@ class AnimationSequence():
             self.__scene.view_settings.view_transform = 'Raw'
 
 def get_objects(scene: Scene) -> dict[str, Object]:
-    ui_props = scene.ui_properties
+    object_selection_props = scene.object_selection_elements
     objects = {
-        'camera':       ui_props.camera,
-        'camera_track': ui_props.camera_track,
-        'bin_cutter':   ui_props.bin_cutter,
-        'grease':       ui_props.grease
+        'camera':       object_selection_props.camera,
+        'camera_track': object_selection_props.camera_track,
+        'bin_cutter':   object_selection_props.bin_cutter,
+        'grease':       object_selection_props.grease
     }
     
     # Object Validation

@@ -2,7 +2,6 @@ import bpy
 
 from bpy.types import Operator, Scene, Context, Event
 from .gb_utils import *
-from .ui import UIProperties
 
 class RENDER_OT_render_queued_items(Operator):
     """
