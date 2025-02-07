@@ -8,7 +8,10 @@ Addon designed to streamline the process of rendering grease bins for our resear
 3. Click on the drop down arrow in the top right of the window.
 4. Select `Install from Disk...`.
 5. Navigate to your downloads folder, select the zip file, and click `Install from Disk`.
-6. Double check the addon is enabled in the addon list. There should be a checkmark next to `GB-Render`.
+6. Find the addon in the list of installed addons under the name `GB-Render`. 
+
+> [!IMPORTANT]
+> Click on the checkmark to deselect it, then reselect it. For some reason, the panel doesn't show up when Blender first loads the addon. This just reloads it.
 
 ## Quickstart Guide
 1. Access the addon's panel in the 3D viewport.
