@@ -28,6 +28,9 @@ Addon designed to streamline the process of rendering grease bins for our resear
 - Works by setting the height of the selected `Bin Cutter` object
 
 ### Extrinsic Camera Properties
+
+<img src="https://github.com/user-attachments/assets/c4ab764b-58e0-46c3-ac31-bd68cbaacaf7" alt="Azimuth vs. elevation diagram" style="width:200px;"/>
+
 `Azimuth Step` defines how many degrees the camera will rotate around the bin 
 horizontally every keyframe.
 - For each full orbit around the bin, $\alpha=\frac{360}{\text{Azimuth Step}}$ frames will be rendered.
