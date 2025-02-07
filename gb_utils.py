@@ -13,165 +13,6 @@ class EngineType(Enum):
     EEVEE = 'BLENDER_EEVEE_NEXT'
     CYCLES = 'CYCLES'
 
-class SceneData():
-    __camera: Object = None
-    __camera_track: Object = None
-    __bin_cutter: Object = None
-    __grease: Object = None
-    __bin_cutter_location: float = 0
-
-    def __init__(self, scene: Scene, azimuth: int=0, elevation: int=0, focal_length: int=35, liquid_level:int=100):
-        self.__scene = scene
-        self.__azimuth = azimuth
-        self.__elevation = elevation
-        self.__focal_length = focal_length  
-        self.__liquid_level = liquid_level
-
-        self.__get_scene_objects()
-
-    def setup_scene(self):
-        # Setting elevation
-        self.__camera.constraints["Follow Path"].offset_factor = 0.25 + self.__elevation/360
-
-        # Setting azimuth
-        self.__camera_track.rotation_mode = 'XYZ'
-        self.__camera_track.rotation_euler[2] = math.radians(self.__azimuth)
-
-        # Other
-        self.__camera.data.lens = self.__focal_length
-        self.__bin_cutter.location.z = self.__bin_cutter_location
-
-    def generate_keyframe(self, frame_num: int):
-        self.setup_scene()
-
-        # Add keyframes for all objects
-        self.__camera.constraints["Follow Path"].keyframe_insert(data_path="offset_factor", frame=frame_num)
-        self.__camera_track.keyframe_insert(data_path="rotation_euler", index=2, frame=frame_num)
-        self.__bin_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
-
-    def __get_scene_objects(self):
-        objects = get_objects(self.__scene)
-        self.__camera = objects['camera']
-        self.__camera_track = objects['camera_track']
-        self.__bin_cutter = objects['bin_cutter']
-        self.__grease = objects['grease']
-        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
-
-class RenderFrame():
-    def __init__(self, root_path: str, file_name: str, scene: Scene, type: FrameType, scene_data: SceneData, width: int=1920, height: int=1080, samples: int=1024):
-        self.__filepath = os.path.join(root_path, file_name)
-        self.__scene = scene
-        self.__engine = EngineType.CYCLES if type == FrameType.RAW else EngineType.EEVEE
-        self.__type = type
-        self.__width = width
-        self.__height = height
-        self.__samples = samples if type == FrameType.RAW else None
-        self.__scene_data = scene_data
-
-    def render(self):
-        self.__switch_engine()
-        self.__scene_data.setup_scene()
-        self.__scene.render.filepath = self.__filepath
-        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
-
-    def generate_keyframe(self, frame_num: int):
-        self.__scene_data.generate_keyframe(frame_num)
-
-    def get_type(self) -> FrameType:
-        return self.__type
-    
-    def __toggle_shadows(self, val: bool):
-        for obj in self.__scene.objects:
-            if hasattr(obj, "visible_shadow"):
-                obj.visible_shadow = val
-            else:
-                raise Exception('Invalid object.')
-
-    def __switch_engine(self):
-        if (self.__samples == None and self.__engine == EngineType.CYCLES):
-            raise Exception('Cycles must have a sample amount specified.')
-        
-        self.__scene.render.resolution_x = self.__width
-        self.__scene.render.resolution_y = self.__height
-        self.__scene.render.engine = self.__engine.value
-
-        # Toggle settings for rendering seg masks
-        if self.__engine == EngineType.CYCLES:
-            self.__scene.cycles.samples = self.__samples
-            self.__toggle_shadows(True)
-            self.__scene.view_settings.view_transform = 'AgX'
-        else:
-            self.__toggle_shadows(False)
-            self.__scene.view_settings.view_transform = 'Raw'
-
-class RenderQueue():
-    def __init__(self, *items: RenderFrame):
-        self.__queue: list[RenderFrame] = []
-        self.__length: int = 0
-        self.__full_length: int = 0
-        self.__curr_frame: int = 0
-        for item in items:
-            self.add(item)
-
-    def add(self, item):
-        self.__queue.append(item)
-        self.__length += 1
-        self.__full_length += 1
-        return self
-
-    def pop(self):
-        if len(self) > 0:
-            curr_frame: RenderFrame = self.__queue[self.__curr_frame]
-            self.__curr_frame += 1
-            self.__length -= 1
-
-            if len(self) == 0:
-                self.__curr_frame = 0
-                self.__full_length = 0
-                self.__queue = []
-
-            return curr_frame
-        else:
-            raise IndexError('This RenderQueue does not have any items.')
-        
-    def copy(self):
-        copy = RenderQueue()
-        for i in self.__queue:
-            copy.add(i)
-        return copy
-    
-    def full_length(self):
-        return self.__full_length
-    
-    def current_frame(self):
-        return self.__curr_frame
-    
-    def generate_keyframes(self, ctx: Context):
-        ctx.scene.frame_start = 1
-        ctx.scene.frame_end = len(self.__queue)
-
-        for i, frame in enumerate(self.__queue):
-            frame.generate_keyframe(i)
-        
-    def __len__(self):
-        return self.__length
-        
-    def __add__(self, other):
-        self_copy = self.copy()
-        other_copy = other.copy()
-        while len(other_copy) > 0:
-            self_copy.add(other_copy.pop())
-        return self_copy
-    
-    def __repr__(self):
-        repr_str: str = '['
-        for i in self.__queue:
-            repr_str += f'{i.get_type().value}, '
-
-        repr_str = repr_str.removesuffix(', ')
-        repr_str += ']'
-        return repr_str
-
 class RenderConfig():
     def __init__(self, scene: Scene):
         param_props = scene.parameter_settings_elements
@@ -194,15 +35,101 @@ class RenderConfig():
         self.sample_amount: int = render_props.sample_amount
         self.width: int = render_props.width
         self.height: int = render_props.height
+
+class FrameData():
+    __camera: Object = None
+    __camera_track: Object = None
+    __bin_cutter: Object = None
+    __grease: Object = None
+    __bin_cutter_location: float = 0
+
+    def __init__(self, scene: Scene, azimuth: int=0, elevation: int=0, focal_length: int=35, liquid_level:int=100):
+        self.__scene = scene
+        self.__azimuth = azimuth
+        self.__elevation = elevation
+        self.__focal_length = focal_length  
+        self.__liquid_level = liquid_level
+
+        self.__get_scene_objects()
+
+    def generate_keyframe(self, frame_num: int):
+        # Setting elevation
+        self.__camera.constraints["Follow Path"].offset_factor = 0.25 + self.__elevation/360
+
+        # Setting azimuth
+        self.__camera_track.rotation_mode = 'XYZ'
+        self.__camera_track.rotation_euler[2] = math.radians(self.__azimuth)
+
+        # Other
+        self.__camera.data.lens = self.__focal_length
+        self.__bin_cutter.location.z = self.__bin_cutter_location
+
+        # Add keyframes for all objects
+        self.__camera.constraints["Follow Path"].keyframe_insert(data_path="offset_factor", frame=frame_num)
+        self.__camera_track.keyframe_insert(data_path="rotation_euler", index=2, frame=frame_num)
+        self.__bin_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
+
+    def __get_scene_objects(self):
+        objects = get_objects(self.__scene)
+        self.__camera = objects['camera']
+        self.__camera_track = objects['camera_track']
+        self.__bin_cutter = objects['bin_cutter']
+        self.__grease = objects['grease']
+        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
+
+class RenderQueue():
+    def __init__(self, *items: FrameData):
+        self.__queue: list[FrameData] = []
+        self.__length: int = 0
+        self.__max_len: int = 0
+        self.__curr_frame: int = 0
+        for item in items:
+            self.add(item)
+
+    def add(self, item):
+        self.__queue.append(item)
+        self.__length += 1
+        self.__max_len += 1
+        return self
+
+    def pop(self) -> FrameData:
+        if len(self) > 0:
+            curr_frame: FrameData = self.__queue[self.__curr_frame]
+            self.__curr_frame += 1
+            self.__length -= 1
+
+            if len(self) == 0:
+                self.__curr_frame = 0
+                self.__max_len = 0
+                self.__queue = []
+
+            return curr_frame
+        else:
+            raise IndexError('This RenderQueue does not have any items.')
+    
+    def max_length(self):
+        return self.__max_len
+        
+    def __len__(self):
+        return self.__length
+    
+    def __repr__(self):
+        repr_str: str = '['
+        for i in self.__queue:
+            repr_str += f'{i.get_type().value}, '
+
+        repr_str = repr_str.removesuffix(', ')
+        repr_str += ']'
+        return repr_str
     
 class AnimationSequence():
     def __init__(self, ctx: Context, frames: RenderQueue):
         self.__scene: Scene = ctx.scene
         self.__cfg: RenderConfig = RenderConfig(self.__scene)
-        self.__frames = frames
-        self.__frames.generate_keyframes(ctx)
         self.rendered_masks: bool = False
         self.fully_rendered: bool = False
+
+        self.__generate_keyframes(ctx, frames)
 
     def render_masks(self):
         self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_000000')
@@ -215,6 +142,14 @@ class AnimationSequence():
         self.fully_rendered = True
         self.__switch_engine(EngineType.CYCLES)
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
+
+    def __generate_keyframes(self, ctx: Context, frames: RenderQueue):
+        ctx.scene.frame_start = 1
+        ctx.scene.frame_end = frames.max_length()
+
+        for i in range(frames.max_length()):
+            frame: FrameData = frames.pop()
+            frame.generate_keyframe(i)
 
     def __toggle_shadows(self, val: bool):
         for obj in self.__scene.objects:
@@ -274,3 +209,32 @@ def get_objects(scene: Scene) -> dict[str, Object]:
         raise Exception("Please add a \"Follow Path\" constraint onto the camera.")
     
     return objects
+
+def create_frames(scene: Scene) -> RenderQueue:
+    cfg: RenderConfig = RenderConfig(scene)
+
+    # Creating Directories
+    if (not os.path.exists(cfg.mask_dir)):
+        os.mkdir(cfg.mask_dir)
+    if (not os.path.exists(cfg.image_dir)):
+        os.mkdir(cfg.image_dir)
+
+    # Loop variables
+    frames: RenderQueue = RenderQueue()
+
+    curr_azimuth: int = 0
+    curr_elevation: int = 0
+    file_name_counter = 0
+
+    while curr_elevation <= cfg.max_elevation:
+        while curr_azimuth < 360:
+            frame_data: FrameData = FrameData(scene, curr_azimuth, curr_elevation, cfg.focal_length, cfg.liquid_level)
+            frames.add(frame_data)
+
+            file_name_counter += 1
+            curr_azimuth += cfg.azimuth_step
+
+        curr_elevation += cfg.elevation_step
+        curr_azimuth = 0
+        
+    return frames

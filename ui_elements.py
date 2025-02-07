@@ -3,6 +3,30 @@ import bpy
 from bpy.props import *
 from bpy.types import PropertyGroup, Object, Material, Context
 
+class DataElements(PropertyGroup):  
+    render_estimate: IntProperty(
+        name='Render Estimate',
+        default=int(round((360/10) * ((90/10)+1)))
+    ) # type: ignore
+
+    render_progress: FloatProperty(
+        name = 'Render Progress',
+        min = 0,
+        max = 1,
+        update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
+    ) # type: ignore
+
+    show_render_progress: BoolProperty(
+        name = 'Show Render Progress',
+        default = False
+    ) # type: ignore
+
+    keyframes_generated: BoolProperty(
+        name = 'data_keyframes_generated',
+        default = False
+    ) # type: ignore
+
+
 def update_render_btn(self, ctx: Context):
     azimuth_step = self.azimuth_step
     elevation_step = self.elevation_step
