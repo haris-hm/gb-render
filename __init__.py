@@ -20,9 +20,9 @@ bl_info = {
     'category': 'gb-research'
 }
 
-import bpy
+import bpy  # noqa: E402
 
-from . import rendering, ui_elements, ui_layout
+from . import rendering, ui_elements, ui_layout  # noqa: E402
 
 CLASSES = (
     ui_elements.DataElements,

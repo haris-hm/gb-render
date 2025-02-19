@@ -164,7 +164,7 @@ class AnimationSequence():
                 raise Exception('Invalid object.')
 
     def __switch_engine(self, engine: EngineType):
-        if (self.__cfg.sample_amount == None and engine == EngineType.CYCLES):
+        if (self.__cfg.sample_amount is None and engine == EngineType.CYCLES):
             raise Exception('Cycles must have a sample amount specified.')
         
         self.__scene.frame_current = 1
@@ -191,16 +191,16 @@ def get_objects(scene: Scene) -> dict[str, Object]:
     }
     
     # Object Validation
-    if(objects['camera'] == None or objects['camera'].type != 'CAMERA'):
+    if(objects['camera'] is None or objects['camera'].type != 'CAMERA'):
         objects['camera'] = None
         raise Exception('Invalid camera object. Please pick a camera in the scene.')
-    elif(objects['camera_track'] == None or objects['camera_track'].type != 'CURVE'):
+    elif(objects['camera_track'] is None or objects['camera_track'].type != 'CURVE'):
         objects['camera_track'] = None
         raise Exception('Invalid camera track object. Please pick a curve object.')
-    elif(objects['bin_cutter'] == None or objects['bin_cutter'].type != 'MESH'):
+    elif(objects['bin_cutter'] is None or objects['bin_cutter'].type != 'MESH'):
         objects['bin_cutter'] = None
         raise Exception('Invalid bin cutter object. Please pick a mesh object.')
-    elif(objects['grease'] == None or objects['grease'].type != 'MESH'):
+    elif(objects['grease'] is None or objects['grease'].type != 'MESH'):
         objects['grease'] = None
         raise Exception('Invalid grease object. Please pick a mesh object.')
     
@@ -210,7 +210,7 @@ def get_objects(scene: Scene) -> dict[str, Object]:
         objects['camera'].constraints["Follow Path"].use_curve_follow = True
         objects['camera'].constraints["Follow Path"].use_curve_radius = True
         objects['camera'].constraints["Follow Path"].target = objects['camera_track']
-    except:
+    except Exception as _:
         raise Exception("Please add a \"Follow Path\" constraint onto the camera.")
     
     return objects

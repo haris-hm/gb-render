@@ -1,9 +1,9 @@
 import bpy
 
-from bpy.props import *
+# from bpy.props import *
 from bpy.types import Panel, Context, Scene, Operator, Event, Material
 
-from .ui_elements import *
+from .ui_elements import ObjectSelectionElements, MaterialElements, ParameterSettingsElements, RenderSettingsElements, DataElements
 
 class VIEW3D_PT_objects(Panel):
     bl_idname = "VIEW3D_PT_objects"
@@ -58,10 +58,10 @@ class VIEW3D_PT_materials(Panel):
     def display_nodes_for_mat(self, material: Material, group: str, group_name: str, props: MaterialElements, layout):
         # Display nodes only if a material is selected
         if material and material.use_nodes:
-            node_tree = material.node_tree
+            # node_tree = material.node_tree
             
             # Populate a dropdown with node names from the material's node tree
-            node_names = [node.name for node in node_tree.nodes]
+            # node_names = [node.name for node in node_tree.nodes]
             layout.prop_search(props, group_name, material.node_tree, "nodes")
             
             # Display node inputs once a node is selected
