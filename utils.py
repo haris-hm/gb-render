@@ -2,7 +2,7 @@ import bpy
 import os
 import math
 
-from bpy.types import Scene, Object, Context
+from bpy.types import Scene, Object, Context, Collection
 from enum import Enum
 
 class FrameType(Enum):
@@ -142,6 +142,8 @@ class AnimationSequence():
 
         # Clear old keyframes
         for obj in get_objects(ctx.scene).values():
+            if isinstance(obj, Collection):
+                continue
             if obj.animation_data:
                 obj.animation_data_clear()
 
@@ -152,6 +154,10 @@ class AnimationSequence():
         ctx.scene.gb_data.keyframes_generated = True
 
     def __setup_engine(self, frame_type: FrameType):    
+        objects: dict[str, Object] = get_objects(self.__scene)
+        rgb_bin_collection: Collection = objects['rgb_bin']
+        seg_bin_collection: Collection = objects['seg_bin']
+
         self.__scene.render.engine = 'CYCLES'
 
         self.__scene.frame_current = 1
@@ -173,6 +179,10 @@ class AnimationSequence():
 
             # Change color profile to one that adds color grading
             self.__scene.view_settings.view_transform = 'AgX'
+
+            # Setup render visibility
+            rgb_bin_collection.hide_render = False
+            seg_bin_collection.hide_render = True
         else: # Settings for rendering seg masks
             # Lower samples, set time limit to 0, and disable anti-aliasing
             self.__scene.cycles.samples = 1
@@ -186,13 +196,19 @@ class AnimationSequence():
             # Change color profile to one which doesn't change the colors
             self.__scene.view_settings.view_transform = 'Raw'
 
-def get_objects(scene: Scene) -> dict[str, Object]:
+            # Setup render visibility
+            rgb_bin_collection.hide_render = True
+            seg_bin_collection.hide_render = False
+
+def get_objects(scene: Scene) -> dict[str, Object | Collection]:
     object_selection_props = scene.object_selection_elements
     objects = {
         'camera':       object_selection_props.camera,
         'camera_track': object_selection_props.camera_track,
         'bin_cutter':   object_selection_props.bin_cutter,
-        'grease':       object_selection_props.grease
+        'grease':       object_selection_props.grease,
+        'rgb_bin':      object_selection_props.rgb_bin,
+        'seg_bin':      object_selection_props.seg_bin
     }
     
     # Object Validation
