@@ -9,10 +9,6 @@ class FrameType(Enum):
     MASK = 'mask'
     RAW = 'raw'
 
-class EngineType(Enum):
-    EEVEE = 'BLENDER_EEVEE_NEXT'
-    CYCLES = 'CYCLES'
-
 class RenderConfig():
     def __init__(self, scene: Scene):
         param_props = scene.parameter_settings_elements
@@ -130,13 +126,12 @@ class AnimationSequence():
         self.__generate_keyframes(ctx, frames)
 
     def render(self, frame_type: FrameType):
+        self.__setup_engine(frame_type)
         # Set file names and render engine accordingly
         if frame_type == FrameType.MASK:
             self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_')
-            self.__switch_engine(EngineType.EEVEE)
         else:
             self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_')
-            self.__switch_engine(EngineType.CYCLES)
         
         # Render the animation
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
@@ -156,29 +151,39 @@ class AnimationSequence():
 
         ctx.scene.gb_data.keyframes_generated = True
 
-    def __toggle_shadows(self, val: bool):
-        for obj in self.__scene.objects:
-            if hasattr(obj, "visible_shadow"):
-                obj.visible_shadow = val
-            else:
-                raise Exception('Invalid object.')
+    def __setup_engine(self, frame_type: FrameType):    
+        self.__scene.render.engine = 'CYCLES'
 
-    def __switch_engine(self, engine: EngineType):
-        if (self.__cfg.sample_amount is None and engine == EngineType.CYCLES):
-            raise Exception('Cycles must have a sample amount specified.')
-        
         self.__scene.frame_current = 1
         self.__scene.render.resolution_x = self.__cfg.width
         self.__scene.render.resolution_y = self.__cfg.height
-        self.__scene.render.engine = engine.value
 
-        # Toggle settings for rendering seg masks
-        if engine == EngineType.CYCLES:
+        # Enable emmision pass; Used for masks
+        self.__scene.view_layers["ViewLayer"].use_pass_emission = True
+        
+        if frame_type == FrameType.RAW: # Settings for rendering RGB images
+            # Set samples, time limit, and anti-aliasing
             self.__scene.cycles.samples = self.__cfg.sample_amount
-            self.__toggle_shadows(True)
+            self.__scene.cycles.time_limit = 60
+            self.__scene.cycles.filter_width = 1.5
+            
+            # Enable denoising and adaptive sampling ('noise threshold')
+            self.__scene.cycles.use_denoising = True
+            self.__scene.cycles.use_adaptive_sampling = True
+
+            # Change color profile to one that adds color grading
             self.__scene.view_settings.view_transform = 'AgX'
-        else:
-            self.__toggle_shadows(False)
+        else: # Settings for rendering seg masks
+            # Lower samples, set time limit to 0, and disable anti-aliasing
+            self.__scene.cycles.samples = 1
+            self.__scene.cycles.time_limit = 0
+            self.__scene.cycles.filter_width = 0.01
+
+            # Disable denoising and adaptive sampling
+            self.__scene.cycles.use_denoising = False
+            self.__scene.cycles.use_adaptive_sampling = False
+
+            # Change color profile to one which doesn't change the colors
             self.__scene.view_settings.view_transform = 'Raw'
 
 def get_objects(scene: Scene) -> dict[str, Object]:
