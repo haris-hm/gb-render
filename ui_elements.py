@@ -1,7 +1,7 @@
 import bpy
 
 from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty
-from bpy.types import PropertyGroup, Object, Material, Context
+from bpy.types import PropertyGroup, Object, Material, Context, Collection
 
 class DataElements(PropertyGroup):  
     render_estimate: IntProperty(
@@ -68,9 +68,23 @@ class ObjectSelectionElements(PropertyGroup):
     ) 
 
     bin_cutter: PointerProperty(
-        name = 'Bin Cutter',
+        name = 'Grease Cutter',
         type = Object,
-        description = 'Select the bin cutter',
+        description = 'Select the grease cutter',
+        update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
+    ) 
+
+    rgb_bin: PointerProperty(
+        name = 'RGB Bin',
+        type = Collection,
+        description = 'Select the textured bin collection',
+        update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
+    ) 
+
+    seg_bin: PointerProperty(
+        name = 'SEG Bin',
+        type = Collection,
+        description = 'Select the segmented bin colleciton',
         update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
     ) 
 

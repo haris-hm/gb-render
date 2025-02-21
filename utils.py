@@ -159,7 +159,7 @@ class AnimationSequence():
         self.__scene.render.resolution_y = self.__cfg.height
 
         # Enable emmision pass; Used for masks
-        self.__scene.view_layers["ViewLayer"].use_pass_emission = True
+        self.__scene.view_layers["ViewLayer"].use_pass_emit = True
         
         if frame_type == FrameType.RAW: # Settings for rendering RGB images
             # Set samples, time limit, and anti-aliasing

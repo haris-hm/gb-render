@@ -20,7 +20,10 @@ class VIEW3D_PT_objects(Panel):
         layout.prop_search(props, "grease", bpy.data, "objects", text="Bin")
         layout.prop_search(props, "camera", bpy.data, "objects", text="Camera")
         layout.prop_search(props, "camera_track", bpy.data, "objects", text="Cam Track")
-        layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Bin Cutter")
+        layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Grease Cutter")
+        layout.prop_search(props, "rgb_bin", bpy.data, "collections", text="RGB Bin")
+        layout.prop_search(props, "seg_bin", bpy.data, "collections", text="SEG Bin")
+        
 
     def register():
         Scene.object_selection_elements = bpy.props.PointerProperty(type=ObjectSelectionElements)
