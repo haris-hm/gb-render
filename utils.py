@@ -1,6 +1,7 @@
 import bpy
 import os
 import math
+import PIL as PIL
 
 from bpy.types import Scene, Object, Context, Collection, BlendDataImages
 from enum import Enum
@@ -130,6 +131,7 @@ class AnimationSequence():
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=False)
 
     def save_frame(self, frame_type: FrameType):
+        print(PIL.__version__)
         frame: int = self.__scene.frame_current
         render_result: BlendDataImages = bpy.data.images.get("Render Result")
 

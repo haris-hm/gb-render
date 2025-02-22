@@ -20,7 +20,23 @@ bl_info = {
     'category': 'gb-research'
 }
 
+import sys  # noqa: E402
+import os   # noqa: E402
 import bpy  # noqa: E402
+
+# Packaged libraries path
+addon_path = os.path.dirname(__file__)
+libs_path = os.path.join(addon_path, "libs")
+
+# Ensure Blender looks for modules in 'libs'
+if libs_path not in sys.path:
+    sys.path.append(libs_path)
+
+# Ensure all libraries are in the path
+try:
+    import PIL  # noqa: F401
+except ImportError as e:
+    print(f"Failed to import Pillow: {e}")
 
 from . import rendering, ui_elements, ui_layout  # noqa: E402
 
