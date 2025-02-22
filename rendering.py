@@ -20,6 +20,7 @@ class RENDER_OT_render(Operator):
     rendering: bool = None
     masks_rendered: bool = None
     images_rendered: bool = None
+    curr_frame_type: FrameType = None
 
     def execute(self, ctx: Context):
         # Validate all relevant objects are selected and the selected directory is valid
@@ -37,7 +38,6 @@ class RENDER_OT_render(Operator):
 
         # If rendering only masks or images
         seq_code: int = int(ctx.scene.render_settings_elements.render_sequence)
-        print(seq_code)
 
         if seq_code > 0:
             self.__render(seq_code, self.animation) 
@@ -63,6 +63,7 @@ class RENDER_OT_render(Operator):
         self.pause = False
 
     def post(self, scene: Scene, ctx: Context=None):
+        self.animation.save_frame(self.curr_frame_type)
         self.rendering = False
     
     def cancelled(self, scene: Scene, ctx: Context=None):
@@ -94,10 +95,12 @@ class RENDER_OT_render(Operator):
             return False
         
     def __render(self, seq_code: int, animation: AnimationSequence):
-        if seq_code == 1:            
+        if seq_code == 1:    
+            self.curr_frame_type = FrameType.RAW        
             animation.render(FrameType.RAW)
             return {"FINISHED"}
         elif seq_code == 2:
+            self.curr_frame_type = FrameType.MASK
             animation.render(FrameType.MASK)
             return {"FINISHED"}
         

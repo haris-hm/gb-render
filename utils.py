@@ -2,7 +2,7 @@ import bpy
 import os
 import math
 
-from bpy.types import Scene, Object, Context, Collection
+from bpy.types import Scene, Object, Context, Collection, BlendDataImages
 from enum import Enum
 
 class FrameType(Enum):
@@ -127,14 +127,36 @@ class AnimationSequence():
 
     def render(self, frame_type: FrameType):
         self.__setup_engine(frame_type)
-        # Set file names and render engine accordingly
-        if frame_type == FrameType.MASK:
-            self.__scene.render.filepath = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_')
-        else:
-            self.__scene.render.filepath = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_')
-        
-        # Render the animation
-        bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=True)
+        bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=False)
+
+    def save_frame(self, frame_type: FrameType):
+        frame: int = self.__scene.frame_current
+        render_result: BlendDataImages = bpy.data.images.get("Render Result")
+
+        if render_result is None:
+            self.report({"ERROR"}, "Render Result not found")
+            return
+
+        print([attr for attr in dir(render_result) if not attr.startswith("_")])
+
+        match frame_type:
+            case FrameType.MASK:
+                path: str = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_{frame:08d}.png')
+
+                if "Emit" in [layer.name for layer in render_result.render_passes]:
+                    emission_result = render_result.render_passes["Emit"]
+                    emission_image = bpy.data.images.new("EmissionPass", width=render_result.size[0], height=render_result.size[1])
+                    emission_image.pixels = emission_result.rect[:]  # Copy pixel data
+
+                    # Save Emission pass
+                    emission_image.file_format = "PNG"
+                    emission_image.filepath_raw = path
+                    emission_image.save_render(path)
+                else:
+                    self.report({"ERROR"}, "Emission pass not found in render result")
+            case FrameType.RAW:
+                path: str = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_')
+                render_result.save_render(filepath=path)
 
     def __generate_keyframes(self, ctx: Context, frames: RenderQueue):
         ctx.scene.frame_start = 1
