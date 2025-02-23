@@ -21,6 +21,7 @@ class RENDER_OT_render(Operator):
     masks_rendered: bool = None
     images_rendered: bool = None
     curr_frame_type: FrameType = None
+    context: Context = None
 
     def execute(self, ctx: Context):
         # Validate all relevant objects are selected and the selected directory is valid
@@ -49,10 +50,13 @@ class RENDER_OT_render(Operator):
         self.masks_rendered = False
         self.images_rendered = False
 
+        self.context = ctx
+
         bpy.app.handlers.render_pre.append(self.pre)
         bpy.app.handlers.render_post.append(self.post)
         bpy.app.handlers.render_cancel.append(self.cancelled)
         bpy.app.handlers.render_complete.append(self.complete)
+        bpy.app.handlers.render_write.append(self.render_write)
 
         self.timer = ctx.window_manager.event_timer_add(0.5, window=ctx.window)
         ctx.window_manager.modal_handler_add(self)
@@ -67,32 +71,37 @@ class RENDER_OT_render(Operator):
         self.animation.save_frame(self.curr_frame_type)
         self.rendering = False
 
-    def complete(self, scene: Scene, ctx: Context):
+    def complete(self, scene: Scene, ctx: Context=None):
         if self.images_rendered is False:
-            print('finished first part')
-            return {"FINISHED"}
+            return 
         
         bpy.app.handlers.render_pre.remove(self.pre)
         bpy.app.handlers.render_post.remove(self.post)
         bpy.app.handlers.render_cancel.remove(self.cancelled)
         bpy.app.handlers.render_complete.remove(self.complete)
-        ctx.window_manager.event_timer_remove(self.timer)
-        print('complete')
+        bpy.app.handlers.render_write.remove(self.render_write)
+
+        self.context.window_manager.event_timer_remove(self.timer)
+
+        self.animation.create_metadata()
 
         return {"FINISHED"}
+
+    def render_write(self, scene: Scene, ctx: Context=None):
+        self.animation.cleanup()
     
     def cancelled(self, scene: Scene, ctx: Context=None):
-        print('cancelled')
         self.stop = True
     
     def modal(self, ctx: Context, event: Event):
         if event.type == 'TIMER':
             if self.stop: 
-                print('canceled from modal')
                 bpy.app.handlers.render_pre.remove(self.pre)
                 bpy.app.handlers.render_post.remove(self.post)
                 bpy.app.handlers.render_cancel.remove(self.cancelled)
                 bpy.app.handlers.render_complete.remove(self.complete)
+                bpy.app.handlers.render_write.remove(self.render_write)
+
                 ctx.window_manager.event_timer_remove(self.timer)
                 
                 return {"FINISHED"}
@@ -117,10 +126,7 @@ class RENDER_OT_render(Operator):
             print('Rendering RGB')
             self.curr_frame_type = FrameType.RAW        
             animation.render(FrameType.RAW)
-            return {"FINISHED"}
         elif seq_code == 2:
             print('Rendering Masks')
             self.curr_frame_type = FrameType.MASK
             animation.render(FrameType.MASK)
-            return {"FINISHED"}
-        

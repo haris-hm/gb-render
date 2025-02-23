@@ -1,6 +1,8 @@
 import bpy
 import os
+import glob
 import math
+import json
 
 from bpy.types import Scene, Object, Context, Collection
 from enum import Enum
@@ -40,6 +42,31 @@ class RenderConfig():
             'bin_rim': tuple(seg_props.bin_rim),
             'grease': tuple(seg_props.grease)
         }
+
+    def dump_json(self) -> dict:
+        seg_colors: dict[str, tuple[int]] = {
+            key: [int(i*255) for i in value] for key, value in self.segmentation_colors.items()
+        }
+
+        metadata = {
+            'liquid_level': self.liquid_level,
+            'azimuth_step': self.azimuth_step,
+            'elevation_step': self.elevation_step,
+            'max_elevation': self.max_elevation,
+            'focal_length': self.focal_length,
+
+            'image_data': {
+                'width': self.width,
+                'height': self.height,
+                'sample_amount': self.sample_amount,
+                'mask_prefix': self.mask_prefix,
+                'image_prefix': self.image_prefix,
+                'segmentation_colors': seg_colors,
+                'masks_denoised': False
+            }
+        }
+
+        return metadata
 
 class FrameData():
     __camera: Object = None
@@ -131,11 +158,14 @@ class AnimationSequence():
     def __init__(self, ctx: Context, frames: RenderQueue):
         self.__scene: Scene = ctx.scene
         self.__cfg: RenderConfig = RenderConfig(self.__scene)
+        self.temp_save_path: str = os.path.join(self.__cfg.directory, 'temp_render')
 
         self.__generate_keyframes(ctx, frames)
 
     def render(self, frame_type: FrameType):
         self.__setup_engine(frame_type)
+        self.__scene.render.filepath = self.temp_save_path
+
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=False)
 
     def save_frame(self, frame_type: FrameType):
@@ -146,8 +176,6 @@ class AnimationSequence():
             self.report({"ERROR"}, "Render Result not found")
             return
 
-        print(f'{frame_type=}')
-
         match frame_type:
             case FrameType.MASK:
                 path: str = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_{frame:08d}.png')
@@ -155,6 +183,15 @@ class AnimationSequence():
             case FrameType.RAW:
                 path: str = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_{frame:08d}.png')
                 render_result.save_render(filepath=path)
+
+    def cleanup(self):
+        for f in glob.glob(f'{self.temp_save_path}*.png'):
+            os.remove(f)
+
+    def create_metadata(self):
+        metadata: dict = self.__cfg.dump_json()
+        with open(os.path.join(self.__cfg.directory, 'metadata.json'), 'w') as f:
+            json.dump(metadata, f, indent=4)
 
     def __generate_keyframes(self, ctx: Context, frames: RenderQueue):
         ctx.scene.frame_start = 1
