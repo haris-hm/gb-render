@@ -20,29 +20,14 @@ bl_info = {
     'category': 'gb-research'
 }
 
-import sys  # noqa: E402
-import os   # noqa: E402
 import bpy  # noqa: E402
-
-# Packaged libraries path
-addon_path = os.path.dirname(__file__)
-libs_path = os.path.join(addon_path, "libs")
-
-# Ensure Blender looks for modules in 'libs'
-if libs_path not in sys.path:
-    sys.path.append(libs_path)
-
-# Ensure all libraries are in the path
-try:
-    import PIL  # noqa: F401
-except ImportError as e:
-    print(f"Failed to import Pillow: {e}")
 
 from . import rendering, ui_elements, ui_layout  # noqa: E402
 
 CLASSES = (
-    ui_elements.DataElements,
+    ui_elements.DataElements, 
     ui_elements.ObjectSelectionElements, 
+    ui_elements.SegmentationColorsElements,
     ui_elements.MaterialElements,
     ui_elements.ParameterSettingsElements,
     ui_elements.RenderSettingsElements,
@@ -50,6 +35,7 @@ CLASSES = (
     ui_layout.WM_OT_parameter_tuning, 
     ui_layout.WM_OT_render_settings,
     ui_layout.VIEW3D_PT_objects, 
+    ui_layout.VIEW3D_PT_seg_colors,
     ui_layout.VIEW3D_PT_materials,
     ui_layout.VIEW3D_PT_controls
 )

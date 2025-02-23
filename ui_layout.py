@@ -3,7 +3,7 @@ import bpy
 # from bpy.props import *
 from bpy.types import Panel, Context, Scene, Operator, Event, Material
 
-from .ui_elements import ObjectSelectionElements, MaterialElements, ParameterSettingsElements, RenderSettingsElements, DataElements
+from .ui_elements import ObjectSelectionElements, SegmentationColorsElements, MaterialElements, ParameterSettingsElements, RenderSettingsElements, DataElements
 
 class VIEW3D_PT_objects(Panel):
     bl_idname = "VIEW3D_PT_objects"
@@ -30,6 +30,39 @@ class VIEW3D_PT_objects(Panel):
 
     def unregister():
         del Scene.object_selection_elements
+
+class VIEW3D_PT_seg_colors(Panel):
+    bl_idname = "VIEW3D_PT_seg_colors"
+    bl_label = "Segmentation Colors"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "GB-Render"
+
+    def draw(self, ctx: Context):
+        layout = self.layout
+        props = ctx.scene.segmentation_colors_elements
+
+        layout.label(text="Configure Colors:")
+        box = layout.box()
+
+        row = box.row()
+        row.prop(props, "bin_interior", text="Bin Interior")
+
+        row = box.row()
+        row.prop(props, "bin_exterior", text="Bin Exterior")
+
+        row = box.row()
+        row.prop(props, "bin_rim", text="Bin Rim")
+
+        row = box.row()
+        row.prop(props, "grease", text="Grease")
+        
+
+    def register():
+        Scene.segmentation_colors_elements = bpy.props.PointerProperty(type=SegmentationColorsElements)
+
+    def unregister():
+        del Scene.segmentation_colors_elements
 
 class VIEW3D_PT_materials(Panel):
     bl_idname = "VIEW3D_PT_materials"

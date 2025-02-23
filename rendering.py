@@ -52,6 +52,7 @@ class RENDER_OT_render(Operator):
         bpy.app.handlers.render_pre.append(self.pre)
         bpy.app.handlers.render_post.append(self.post)
         bpy.app.handlers.render_cancel.append(self.cancelled)
+        bpy.app.handlers.render_complete.append(self.complete)
 
         self.timer = ctx.window_manager.event_timer_add(0.5, window=ctx.window)
         ctx.window_manager.modal_handler_add(self)
@@ -65,24 +66,41 @@ class RENDER_OT_render(Operator):
     def post(self, scene: Scene, ctx: Context=None):
         self.animation.save_frame(self.curr_frame_type)
         self.rendering = False
+
+    def complete(self, scene: Scene, ctx: Context):
+        if self.images_rendered is False:
+            print('finished first part')
+            return {"FINISHED"}
+        
+        bpy.app.handlers.render_pre.remove(self.pre)
+        bpy.app.handlers.render_post.remove(self.post)
+        bpy.app.handlers.render_cancel.remove(self.cancelled)
+        bpy.app.handlers.render_complete.remove(self.complete)
+        ctx.window_manager.event_timer_remove(self.timer)
+        print('complete')
+
+        return {"FINISHED"}
     
     def cancelled(self, scene: Scene, ctx: Context=None):
+        print('cancelled')
         self.stop = True
     
     def modal(self, ctx: Context, event: Event):
         if event.type == 'TIMER':
-            if True in (self.images_rendered, self.stop is True): 
+            if self.stop: 
+                print('canceled from modal')
                 bpy.app.handlers.render_pre.remove(self.pre)
                 bpy.app.handlers.render_post.remove(self.post)
                 bpy.app.handlers.render_cancel.remove(self.cancelled)
+                bpy.app.handlers.render_complete.remove(self.complete)
                 ctx.window_manager.event_timer_remove(self.timer)
                 
                 return {"FINISHED"}
-            elif self.rendering is False:
+            elif not self.rendering:
                 if not self.masks_rendered:
                     self.__render(2, self.animation)
                     self.masks_rendered = True
-                else:
+                elif not self.images_rendered:
                     self.__render(1, self.animation)
                     self.images_rendered = True
                 
@@ -96,10 +114,12 @@ class RENDER_OT_render(Operator):
         
     def __render(self, seq_code: int, animation: AnimationSequence):
         if seq_code == 1:    
+            print('Rendering RGB')
             self.curr_frame_type = FrameType.RAW        
             animation.render(FrameType.RAW)
             return {"FINISHED"}
         elif seq_code == 2:
+            print('Rendering Masks')
             self.curr_frame_type = FrameType.MASK
             animation.render(FrameType.MASK)
             return {"FINISHED"}

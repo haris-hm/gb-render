@@ -1,9 +1,8 @@
 import bpy
 import os
 import math
-import PIL as PIL
 
-from bpy.types import Scene, Object, Context, Collection, BlendDataImages
+from bpy.types import Scene, Object, Context, Collection
 from enum import Enum
 
 class FrameType(Enum):
@@ -14,6 +13,7 @@ class RenderConfig():
     def __init__(self, scene: Scene):
         param_props = scene.parameter_settings_elements
         render_props = scene.render_settings_elements
+        seg_props = scene.segmentation_colors_elements
 
         # Scene Settings
         self.liquid_level: int = param_props.liquid_level
@@ -32,6 +32,14 @@ class RenderConfig():
         self.sample_amount: int = render_props.sample_amount
         self.width: int = render_props.width
         self.height: int = render_props.height
+
+        # Segmentation colors
+        self.segmentation_colors: dict[str, tuple[int]] = {
+            'bin_interior': tuple(seg_props.bin_interior),
+            'bin_exterior': tuple(seg_props.bin_exterior),
+            'bin_rim': tuple(seg_props.bin_rim),
+            'grease': tuple(seg_props.grease)
+        }
 
 class FrameData():
     __camera: Object = None
@@ -131,33 +139,21 @@ class AnimationSequence():
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=False)
 
     def save_frame(self, frame_type: FrameType):
-        print(PIL.__version__)
         frame: int = self.__scene.frame_current
-        render_result: BlendDataImages = bpy.data.images.get("Render Result")
+        render_result: bpy.types.Image = bpy.data.images.get("Render Result")
 
         if render_result is None:
             self.report({"ERROR"}, "Render Result not found")
             return
 
-        print([attr for attr in dir(render_result) if not attr.startswith("_")])
+        print(f'{frame_type=}')
 
         match frame_type:
             case FrameType.MASK:
                 path: str = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_{frame:08d}.png')
-
-                if "Emit" in [layer.name for layer in render_result.render_passes]:
-                    emission_result = render_result.render_passes["Emit"]
-                    emission_image = bpy.data.images.new("EmissionPass", width=render_result.size[0], height=render_result.size[1])
-                    emission_image.pixels = emission_result.rect[:]  # Copy pixel data
-
-                    # Save Emission pass
-                    emission_image.file_format = "PNG"
-                    emission_image.filepath_raw = path
-                    emission_image.save_render(path)
-                else:
-                    self.report({"ERROR"}, "Emission pass not found in render result")
+                render_result.save_render(filepath=path)
             case FrameType.RAW:
-                path: str = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_')
+                path: str = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_{frame:08d}.png')
                 render_result.save_render(filepath=path)
 
     def __generate_keyframes(self, ctx: Context, frames: RenderQueue):
@@ -207,6 +203,9 @@ class AnimationSequence():
             # Setup render visibility
             rgb_bin_collection.hide_render = False
             seg_bin_collection.hide_render = True
+
+            # Setup compositor
+            self.__scene.node_tree.nodes['Switch'].check = False
         else: # Settings for rendering seg masks
             # Lower samples, set time limit to 0, and disable anti-aliasing
             self.__scene.cycles.samples = 1
@@ -223,6 +222,9 @@ class AnimationSequence():
             # Setup render visibility
             rgb_bin_collection.hide_render = True
             seg_bin_collection.hide_render = False
+
+            # Setup compositor
+            self.__scene.node_tree.nodes['Switch'].check = True
 
 def get_objects(scene: Scene) -> dict[str, Object | Collection]:
     object_selection_props = scene.object_selection_elements

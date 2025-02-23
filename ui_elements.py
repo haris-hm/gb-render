@@ -1,6 +1,6 @@
 import bpy
 
-from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty
+from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty, FloatVectorProperty
 from bpy.types import PropertyGroup, Object, Material, Context, Collection
 
 class DataElements(PropertyGroup):  
@@ -87,6 +87,39 @@ class ObjectSelectionElements(PropertyGroup):
         description = 'Select the segmented bin colleciton',
         update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
     ) 
+
+class SegmentationColorsElements(PropertyGroup):
+    bin_interior: FloatVectorProperty(
+        name="Bin Interior Color",
+        subtype='COLOR',
+        default=(1.0, 0.0, 0.0),  
+        min=0.0, max=1.0,
+        description="Select the color for the bin interior"
+    )
+
+    bin_exterior: FloatVectorProperty(
+        name="Bin Exterior Color",
+        subtype='COLOR',
+        default=(0.0, 0.0, 1.0),  
+        min=0.0, max=1.0,
+        description="Select the color for the bin exterior"
+    )
+
+    bin_rim: FloatVectorProperty(
+        name="Bin Rim Color",
+        subtype='COLOR',
+        default=(0.0, 1.0, 0.0),  
+        min=0.0, max=1.0,
+        description="Select the color for the bin rim"
+    )
+
+    grease: FloatVectorProperty(
+        name="Grease Color",
+        subtype='COLOR',
+        default=(1.0, 1.0, 0.0),  
+        min=0.0, max=1.0,
+        description="Select the color for the grease"
+    )
 
 class MaterialElements(PropertyGroup):
     bin_int_mat: PointerProperty(
