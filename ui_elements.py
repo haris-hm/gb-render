@@ -2,6 +2,7 @@ import bpy
 
 from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty, FloatVectorProperty
 from bpy.types import PropertyGroup, Object, Material, Context, Collection
+from uuid import uuid4
 
 class DataElements(PropertyGroup):  
     render_estimate: IntProperty(
@@ -29,16 +30,22 @@ class DataElements(PropertyGroup):
 def update_render_btn(self, ctx: Context):
     # Access properties from their respective classes
     azimuth_step = ctx.scene.parameter_settings_elements.azimuth_step
+
     elevation_step = ctx.scene.parameter_settings_elements.elevation_step
     max_elevation = ctx.scene.parameter_settings_elements.max_elevation
+
+    zoom_levels = ctx.scene.parameter_settings_elements.zoom_levels
+
     render_sequence = ctx.scene.render_settings_elements.render_sequence
 
-    estimate = (360 / azimuth_step) * ((max_elevation / elevation_step) + 1)
+    # Calculate the estimated number of frames
+    estimate = (360 / azimuth_step) * ((max_elevation // elevation_step) + 1) * zoom_levels
     if int(render_sequence) == 0:
         estimate *= 2
-
+        
     ctx.scene.gb_data.render_estimate = int(round(estimate))
 
+    # Update the UI
     for area in ctx.screen.areas:
         if area.type == 'VIEW_3D':
             for region in area.regions:
@@ -71,6 +78,13 @@ class ObjectSelectionElements(PropertyGroup):
         name = 'Grease Cutter',
         type = Object,
         description = 'Select the grease cutter',
+        update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
+    )
+
+    seg_bin_cutter: PointerProperty(
+        name = 'Seg Grease Cutter',
+        type = Object,
+        description = 'Select the segmentation grease cutter',
         update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
     ) 
 
@@ -191,6 +205,33 @@ class ParameterSettingsElements(PropertyGroup):
         update = update_render_btn
     ) 
 
+    starting_zoom: FloatProperty(
+        name = 'Starting Zoom',
+        default = 1,
+        min = 0.5,
+        max = 2,
+        subtype = 'FACTOR',
+        update = update_render_btn
+    )
+
+    zoom_step: FloatProperty(
+        name = 'Zoom Step',
+        default = 0.5,
+        min = 0.1,
+        max = 1,
+        subtype = 'FACTOR',
+        update = update_render_btn
+    )
+
+    zoom_levels: IntProperty(
+        name = 'Zoom Levels',
+        default = 3,
+        min = 1,
+        max = 10,
+        subtype = 'FACTOR',
+        update = update_render_btn
+    )   
+
     focal_length: IntProperty(
         name = 'Focal length',
         default = 50,
@@ -213,6 +254,11 @@ class RenderSettingsElements(PropertyGroup):
     image_prefix: StringProperty(
         name = 'Image Prefix',
         default = 'RGB'
+    ) 
+
+    dataset_name: StringProperty(
+        name = 'Dataset Name',
+        default = f'gb_dataset_{uuid4()}'
     ) 
 
     width: IntProperty(

@@ -22,6 +22,7 @@ class RENDER_OT_render(Operator):
     images_rendered: bool = None
     curr_frame_type: FrameType = None
     context: Context = None
+    seq_code: int = None
 
     def execute(self, ctx: Context):
         # Validate all relevant objects are selected and the selected directory is valid
@@ -38,10 +39,10 @@ class RENDER_OT_render(Operator):
         self.animation = AnimationSequence(ctx, frames)  
 
         # If rendering only masks or images
-        seq_code: int = int(ctx.scene.render_settings_elements.render_sequence)
+        self.seq_code: int = int(ctx.scene.render_settings_elements.render_sequence)
 
-        if seq_code > 0:
-            self.__render(seq_code, self.animation) 
+        if self.seq_code > 0:
+            self.__render(self.seq_code, self.animation) 
         
         # If rendering masks, then images
         self.stop = False
@@ -58,21 +59,21 @@ class RENDER_OT_render(Operator):
         bpy.app.handlers.render_complete.append(self.complete)
         bpy.app.handlers.render_write.append(self.render_write)
 
-        self.timer = ctx.window_manager.event_timer_add(0.5, window=ctx.window)
+        self.timer = ctx.window_manager.event_timer_add(2, window=ctx.window)
         ctx.window_manager.modal_handler_add(self)
 
         return {"RUNNING_MODAL"}
     
     def pre(self, scene: Scene, ctx: Context=None):
         self.rendering = True
-        self.pause = False
 
     def post(self, scene: Scene, ctx: Context=None):
         self.animation.save_frame(self.curr_frame_type)
-        self.rendering = False
 
     def complete(self, scene: Scene, ctx: Context=None):
         if self.images_rendered is False:
+            self.rendering = False
+            print('rendered masks')
             return 
         
         bpy.app.handlers.render_pre.remove(self.pre)
@@ -85,6 +86,8 @@ class RENDER_OT_render(Operator):
 
         self.animation.create_metadata()
 
+        print('Animation rendered successfully')
+
         return {"FINISHED"}
 
     def render_write(self, scene: Scene, ctx: Context=None):
@@ -96,6 +99,7 @@ class RENDER_OT_render(Operator):
     def modal(self, ctx: Context, event: Event):
         if event.type == 'TIMER':
             if self.stop: 
+                print('Animation rendering cancelled')
                 bpy.app.handlers.render_pre.remove(self.pre)
                 bpy.app.handlers.render_post.remove(self.post)
                 bpy.app.handlers.render_cancel.remove(self.cancelled)
@@ -105,7 +109,7 @@ class RENDER_OT_render(Operator):
                 ctx.window_manager.event_timer_remove(self.timer)
                 
                 return {"FINISHED"}
-            elif not self.rendering:
+            elif not self.rendering and self.seq_code == 0:
                 if not self.masks_rendered:
                     self.__render(2, self.animation)
                     self.masks_rendered = True

@@ -21,6 +21,7 @@ class VIEW3D_PT_objects(Panel):
         layout.prop_search(props, "camera", bpy.data, "objects", text="Camera")
         layout.prop_search(props, "camera_track", bpy.data, "objects", text="Cam Track")
         layout.prop_search(props, "bin_cutter", bpy.data, "objects", text="Grease Cutter")
+        layout.prop_search(props, "seg_bin_cutter", bpy.data, "objects", text="Seg Cutter")
         layout.prop_search(props, "rgb_bin", bpy.data, "collections", text="RGB Bin")
         layout.prop_search(props, "seg_bin", bpy.data, "collections", text="SEG Bin")
         
@@ -142,7 +143,7 @@ class WM_OT_parameter_tuning(Operator):
         props = ctx.scene.parameter_settings_elements
         layout = self.layout
 
-        layout.label(text="Camera Movement (Extrinsic):")
+        layout.label(text="Grease Settings:")
         box = layout.box()
         row = box.row()
         row.label(text="Liquid Level:", icon='DOT')
@@ -161,8 +162,22 @@ class WM_OT_parameter_tuning(Operator):
         row.prop(props, "elevation_step")
 
         row = box.row()
-        row.label(text= "Max Elevation", icon = 'EMPTY_SINGLE_ARROW')
+        row.label(text= "Max Elevation:", icon = 'EMPTY_SINGLE_ARROW')
         row.prop(props, "max_elevation")
+
+        layout.separator(factor= 1)
+
+        row = box.row()
+        row.label(text= "Starting Zoom:", icon = 'ZOOM_ALL')
+        row.prop(props, "starting_zoom")
+
+        row = box.row()
+        row.label(text= "Zoom Step:", icon = 'ZOOM_IN')
+        row.prop(props, "zoom_step")
+
+        row = box.row()
+        row.label(text= "Zoom Levels:", icon = 'ZOOM_SELECTED')
+        row.prop(props, "zoom_levels")
 
         layout.separator(factor= 1)
 
@@ -203,6 +218,8 @@ class WM_OT_render_settings(Operator):
         row = box.row()
         row.prop(props, 'mask_prefix')
         row.prop(props, 'image_prefix')
+        row = box.row()
+        row.prop(props, 'dataset_name')
 
         row = layout.row()
         row.label(text='Image Quality Settings')
@@ -247,7 +264,7 @@ class VIEW3D_PT_controls(Panel):
         layout.separator(factor=1)
         box = layout.box()
         row = box.row()
-        row.operator("render.render_generated_animation", text=f'Render Images ({data.render_estimate//2} Frames)', icon="RENDER_RESULT")
+        row.operator("render.render_generated_animation", text=f'Render Images ({data.render_estimate} Frames)', icon="RENDER_RESULT")
 
     def register():
         Scene.gb_data = bpy.props.PointerProperty(type=DataElements)

@@ -13,6 +13,7 @@ class FrameType(Enum):
 
 class RenderConfig():
     def __init__(self, scene: Scene):
+        mat_props = scene.material_elements
         param_props = scene.parameter_settings_elements
         render_props = scene.render_settings_elements
         seg_props = scene.segmentation_colors_elements
@@ -22,12 +23,17 @@ class RenderConfig():
         self.azimuth_step: int = param_props.azimuth_step
         self.elevation_step: int = param_props.elevation_step
         self.max_elevation: int = param_props.max_elevation
+        self.starting_zoom: int = param_props.starting_zoom
+        self.zoom_step: int = param_props.zoom_step
+        self.zoom_levels: int = param_props.zoom_levels
         self.focal_length: int = param_props.focal_length
 
         # Render Settings
         self.directory: str = bpy.path.abspath(render_props.directory)
-        self.mask_dir: str = os.path.join(self.directory, 'masks')
-        self.image_dir: str = os.path.join(self.directory, 'images')
+        self.dataset_name: str = render_props.dataset_name
+        self.dataset_folder: str = os.join(self.directory, self.dataset_name)
+        self.mask_dir: str = os.path.join(self.dataset_folder, 'masks')
+        self.image_dir: str = os.path.join(self.dataset_folder, 'images')
         self.sequence_setting: int = int(render_props.render_sequence)
         self.mask_prefix: str = render_props.mask_prefix
         self.image_prefix: str = render_props.image_prefix
@@ -43,6 +49,23 @@ class RenderConfig():
             'grease': tuple(seg_props.grease)
         }
 
+        # Material Colors
+        self.material_colors: dict[str, tuple[int]] = {
+            'bin_interior': {
+                socket.name: socket.default_value \
+                    for socket in mat_props.bin_int_mat.node_tree.nodes[mat_props.bin_int_group].inputs
+            },
+            'bin_exterior': {
+                socket.name: socket.default_value \
+                    for socket in mat_props.bin_ext_mat.node_tree.nodes[mat_props.bin_ext_group].inputs
+            },
+            'grease': {
+                socket.name: socket.default_value \
+                    for socket in mat_props.grease_mat.node_tree.nodes[mat_props.grease_group].inputs \
+                    if isinstance(socket.default_value, float)
+            }
+        }
+
     def dump_json(self) -> dict:
         seg_colors: dict[str, tuple[int]] = {
             key: [int(i*255) for i in value] for key, value in self.segmentation_colors.items()
@@ -54,6 +77,11 @@ class RenderConfig():
             'elevation_step': self.elevation_step,
             'max_elevation': self.max_elevation,
             'focal_length': self.focal_length,
+            'starting_zoom': self.starting_zoom,
+            'zoom_step': self.zoom_step,
+            'zoom_levels': self.zoom_levels,
+
+            'material_settings': self.material_colors,
 
             'image_data': {
                 'width': self.width,
@@ -72,15 +100,16 @@ class FrameData():
     __camera: Object = None
     __camera_track: Object = None
     __bin_cutter: Object = None
+    __seg_cutter: Object = None
     __grease: Object = None
     __bin_cutter_location: float = 0
 
-    def __init__(self, scene: Scene, azimuth: int=0, elevation: int=0, focal_length: int=35, liquid_level:int=100):
+    def __init__(self, scene: Scene, cfg: RenderConfig, azimuth: int=0, elevation: int=0, zoom: float=1.0):
         self.__scene = scene
         self.__azimuth = azimuth
         self.__elevation = elevation
-        self.__focal_length = focal_length  
-        self.__liquid_level = liquid_level
+        self.__zoom = zoom
+        self.__cfg = cfg
 
         self.__get_scene_objects()
 
@@ -92,13 +121,18 @@ class FrameData():
         self.__camera_track.rotation_mode = 'XYZ'
         self.__camera_track.rotation_euler[2] = math.radians(self.__azimuth)
 
+        # Setting zoom
+        self.__camera_track.scale = (self.__zoom, self.__zoom, self.__zoom)
+
         # Other
-        self.__camera.data.lens = self.__focal_length
+        self.__camera.data.lens = self.__cfg.focal_length
         self.__bin_cutter.location.z = self.__bin_cutter_location
+        self.__seg_cutter.location.z = self.__bin_cutter_location
 
         # Add keyframes for all objects
         self.__camera.constraints["Follow Path"].keyframe_insert(data_path="offset_factor", frame=frame_num)
         self.__camera_track.keyframe_insert(data_path="rotation_euler", index=2, frame=frame_num)
+        self.__camera_track.keyframe_insert(data_path="scale", frame=frame_num)
         self.__bin_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
 
     def __get_scene_objects(self):
@@ -106,8 +140,12 @@ class FrameData():
         self.__camera = objects['camera']
         self.__camera_track = objects['camera_track']
         self.__bin_cutter = objects['bin_cutter']
+        self.__seg_cutter = objects['seg_cutter']
         self.__grease = objects['grease']
-        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
+        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__cfg.liquid_level*.01)
+
+    def __repr__(self) -> str:
+        return f'Frame: <Azimuth: {self.__azimuth}, Elevation: {self.__elevation}, Zoom: {self.__zoom}>'
 
 class RenderQueue():
     def __init__(self, *items: FrameData):
@@ -148,7 +186,7 @@ class RenderQueue():
     def __repr__(self) -> str:
         repr_str: str = '['
         for i in self.__queue:
-            repr_str += f'{i.get_type().value}, '
+            repr_str += f'{i}, '
 
         repr_str = repr_str.removesuffix(', ')
         repr_str += ']'
@@ -269,6 +307,7 @@ def get_objects(scene: Scene) -> dict[str, Object | Collection]:
         'camera':       object_selection_props.camera,
         'camera_track': object_selection_props.camera_track,
         'bin_cutter':   object_selection_props.bin_cutter,
+        'seg_cutter':   object_selection_props.seg_bin_cutter,
         'grease':       object_selection_props.grease,
         'rgb_bin':      object_selection_props.rgb_bin,
         'seg_bin':      object_selection_props.seg_bin
@@ -284,9 +323,18 @@ def get_objects(scene: Scene) -> dict[str, Object | Collection]:
     elif(objects['bin_cutter'] is None or objects['bin_cutter'].type != 'MESH'):
         objects['bin_cutter'] = None
         raise Exception('Invalid bin cutter object. Please pick a mesh object.')
+    elif(objects['seg_cutter'] is None or objects['bin_cutter'].type != 'MESH'):
+        objects['seg_cutter'] = None
+        raise Exception('Invalid bin cutter object. Please pick a mesh object.')
     elif(objects['grease'] is None or objects['grease'].type != 'MESH'):
         objects['grease'] = None
         raise Exception('Invalid grease object. Please pick a mesh object.')
+    elif(objects['rgb_bin'] is None):
+        objects['rgb_bin'] = None
+        raise Exception('Invalid RGB bin collection. Please pick a valid collection.')
+    elif(objects['seg_cutter'] is None):
+        objects['seg_cutter'] = None
+        raise Exception('Invalid SEG bin collection. Please pick a valid collection.')
     
     # Constraint Validation
     try: 
@@ -303,25 +351,37 @@ def create_frames(scene: Scene) -> RenderQueue:
     cfg: RenderConfig = RenderConfig(scene)
 
     # Creating Directories
-    if (not os.path.exists(cfg.mask_dir)):
+    if not os.path.exists(cfg.dataset_folder):
+        os.mkdir(cfg.dataset_folder)
+    if not os.path.exists(cfg.mask_dir):
         os.mkdir(cfg.mask_dir)
-    if (not os.path.exists(cfg.image_dir)):
+    if not os.path.exists(cfg.image_dir):
         os.mkdir(cfg.image_dir)
 
     # Loop variables
     frames: RenderQueue = RenderQueue()
 
+    max_zoom: float = cfg.starting_zoom + (cfg.zoom_levels - 1)*cfg.zoom_step
+
+    curr_zoom: float = cfg.starting_zoom
     curr_azimuth: int = 0
     curr_elevation: int = 0
 
-    while curr_elevation <= cfg.max_elevation:
-        while curr_azimuth < 360:
-            frame_data: FrameData = FrameData(scene, curr_azimuth, curr_elevation, cfg.focal_length, cfg.liquid_level)
-            frames.add(frame_data)
+    while curr_zoom <= max_zoom:
+        while curr_elevation <= cfg.max_elevation:
+            while curr_azimuth < 360:
+                frame_data: FrameData = FrameData(scene, cfg, curr_azimuth, curr_elevation, curr_zoom)
+                frames.add(frame_data)
 
-            curr_azimuth += cfg.azimuth_step
+                curr_azimuth += cfg.azimuth_step
 
-        curr_elevation += cfg.elevation_step
+            curr_elevation += cfg.elevation_step
+            curr_azimuth = 0
+
+        curr_zoom += cfg.zoom_step
         curr_azimuth = 0
+        curr_elevation = 0
+
+    print(f'Rendering {len(frames)} frames.')
         
     return frames
