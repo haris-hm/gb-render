@@ -266,10 +266,11 @@ class AnimationSequence():
         self.__scene.view_layers["ViewLayer"].use_pass_emit = True
         
         if frame_type == FrameType.RAW: # Settings for rendering RGB images
-            # Set samples, time limit, and anti-aliasing
+            # Set samples, time limit, dithering, and anti-aliasing
             self.__scene.cycles.samples = self.__cfg.sample_amount
             self.__scene.cycles.time_limit = 60
             self.__scene.cycles.filter_width = 1.5
+            self.__scene.render.dither_intensity = 1.0
             
             # Enable denoising and adaptive sampling ('noise threshold')
             self.__scene.cycles.use_denoising = True
@@ -285,10 +286,11 @@ class AnimationSequence():
             # Setup compositor
             self.__scene.node_tree.nodes['Switch'].check = False
         else: # Settings for rendering seg masks
-            # Lower samples, set time limit to 0, and disable anti-aliasing
+            # Lower samples, set time limit to 0, and disable anti-aliasing and dithering
             self.__scene.cycles.samples = 1
             self.__scene.cycles.time_limit = 0
             self.__scene.cycles.filter_width = 0.01
+            self.__scene.render.dither_intensity = 0.0
 
             # Disable denoising and adaptive sampling
             self.__scene.cycles.use_denoising = False
