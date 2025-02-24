@@ -31,7 +31,7 @@ class RenderConfig():
         # Render Settings
         self.directory: str = bpy.path.abspath(render_props.directory)
         self.dataset_name: str = render_props.dataset_name
-        self.dataset_folder: str = os.join(self.directory, self.dataset_name)
+        self.dataset_folder: str = os.path.join(self.directory, self.dataset_name)
         self.mask_dir: str = os.path.join(self.dataset_folder, 'masks')
         self.image_dir: str = os.path.join(self.dataset_folder, 'images')
         self.sequence_setting: int = int(render_props.render_sequence)

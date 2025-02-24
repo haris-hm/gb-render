@@ -106,7 +106,7 @@ class SegmentationColorsElements(PropertyGroup):
     bin_interior: FloatVectorProperty(
         name="Bin Interior Color",
         subtype='COLOR',
-        default=(1.0, 0.0, 0.0),  
+        default=(0.0, 0.0, 1.0),  
         min=0.0, max=1.0,
         description="Select the color for the bin interior"
     )
@@ -114,7 +114,7 @@ class SegmentationColorsElements(PropertyGroup):
     bin_exterior: FloatVectorProperty(
         name="Bin Exterior Color",
         subtype='COLOR',
-        default=(0.0, 0.0, 1.0),  
+        default=(0.0, 1.0, 1.0),  
         min=0.0, max=1.0,
         description="Select the color for the bin exterior"
     )
@@ -122,7 +122,7 @@ class SegmentationColorsElements(PropertyGroup):
     bin_rim: FloatVectorProperty(
         name="Bin Rim Color",
         subtype='COLOR',
-        default=(0.0, 1.0, 0.0),  
+        default=(1.0, 0.0, 0.0),  
         min=0.0, max=1.0,
         description="Select the color for the bin rim"
     )
