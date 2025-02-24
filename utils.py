@@ -72,6 +72,7 @@ class RenderConfig():
         }
 
         metadata = {
+            'dataset_name': self.dataset_name,
             'liquid_level': self.liquid_level,
             'azimuth_step': self.azimuth_step,
             'elevation_step': self.elevation_step,
@@ -81,7 +82,10 @@ class RenderConfig():
             'zoom_step': self.zoom_step,
             'zoom_levels': self.zoom_levels,
 
-            'material_settings': self.material_colors,
+            'color_data': {
+                'segmentation_colors': seg_colors,
+                'material_settings': self.material_colors
+            },
 
             'image_data': {
                 'width': self.width,
@@ -89,7 +93,6 @@ class RenderConfig():
                 'sample_amount': self.sample_amount,
                 'mask_prefix': self.mask_prefix,
                 'image_prefix': self.image_prefix,
-                'segmentation_colors': seg_colors,
                 'masks_denoised': False
             }
         }
@@ -196,7 +199,7 @@ class AnimationSequence():
     def __init__(self, ctx: Context, frames: RenderQueue):
         self.__scene: Scene = ctx.scene
         self.__cfg: RenderConfig = RenderConfig(self.__scene)
-        self.temp_save_path: str = os.path.join(self.__cfg.directory, 'temp_render')
+        self.temp_save_path: str = os.path.join(self.__cfg.dataset_folder, 'temp_render')
 
         self.__generate_keyframes(ctx, frames)
 
@@ -228,7 +231,7 @@ class AnimationSequence():
 
     def create_metadata(self):
         metadata: dict = self.__cfg.dump_json()
-        with open(os.path.join(self.__cfg.directory, 'metadata.json'), 'w') as f:
+        with open(os.path.join(self.__cfg.dataset_folder, 'metadata.json'), 'w') as f:
             json.dump(metadata, f, indent=4)
 
     def __generate_keyframes(self, ctx: Context, frames: RenderQueue):
