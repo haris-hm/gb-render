@@ -31,15 +31,23 @@ def update_render_btn(self, ctx: Context):
     # Access properties from their respective classes
     azimuth_step = ctx.scene.parameter_settings_elements.azimuth_step
 
-    elevation_step = ctx.scene.parameter_settings_elements.elevation_step
+    starting_elevation = ctx.scene.parameter_settings_elements.starting_elevation
     max_elevation = ctx.scene.parameter_settings_elements.max_elevation
+    elevation_step = ctx.scene.parameter_settings_elements.elevation_step
 
     zoom_levels = ctx.scene.parameter_settings_elements.zoom_levels
+
+    starting_liquid_level = ctx.scene.parameter_settings_elements.starting_liquid_level
+    liquid_level_step = ctx.scene.parameter_settings_elements.liquid_level_step
 
     render_sequence = ctx.scene.render_settings_elements.render_sequence
 
     # Calculate the estimated number of frames
-    estimate = (360 / azimuth_step) * ((max_elevation // elevation_step) + 1) * zoom_levels
+    azimuths_rendered: float = 360 / azimuth_step
+    elevations_rendered: int = ((max_elevation-starting_elevation) // elevation_step) + 1
+    liquid_levels: int = ((100-starting_liquid_level) / liquid_level_step) + 1
+
+    estimate = azimuths_rendered * elevations_rendered * zoom_levels * liquid_levels
     if int(render_sequence) == 0:
         estimate *= 2
         
@@ -51,6 +59,32 @@ def update_render_btn(self, ctx: Context):
             for region in area.regions:
                 if region.type == 'UI':
                     region.tag_redraw()
+
+def update_seg_colors(self, context):
+    def get_rgb_color(material):
+        if material and material.node_tree:
+            for node in material.node_tree.nodes:
+                if node.type == 'RGB':
+                    return node.outputs[0].default_value[:3]
+        return (0.0, 0.0, 0.0)
+
+    self.bin_interior = get_rgb_color(self.bin_int_mat)
+    self.bin_exterior = get_rgb_color(self.bin_ext_mat)
+    self.bin_rim = get_rgb_color(self.bin_rim_mat)
+    self.grease = get_rgb_color(self.grease_mat)
+
+def update_seg_material_colors(self, context):
+    def set_rgb_color(material, color):
+        if material and material.node_tree:
+            for node in material.node_tree.nodes:
+                if node.type == 'RGB':
+                    # Set the RGB color with alpha 1.0
+                    node.outputs[0].default_value = (*color, 1.0)  
+
+    set_rgb_color(self.bin_int_mat, self.bin_interior)
+    set_rgb_color(self.bin_ext_mat, self.bin_exterior)
+    set_rgb_color(self.bin_rim_mat, self.bin_rim)
+    set_rgb_color(self.grease_mat, self.grease)
 
 class ObjectSelectionElements(PropertyGroup):
     grease: PointerProperty(
@@ -103,12 +137,41 @@ class ObjectSelectionElements(PropertyGroup):
     ) 
 
 class SegmentationColorsElements(PropertyGroup):
+    bin_int_mat: PointerProperty(
+        name = 'Interior',
+        type = Material,
+        description = 'Select the bin interior segmentation material',
+        update = update_seg_colors
+    ) 
+
+    bin_ext_mat: PointerProperty(
+        name = 'Exterior',
+        type = Material,
+        description = 'Select the bin exterior segmentation material',
+        update = update_seg_colors
+    ) 
+
+    bin_rim_mat: PointerProperty(
+        name = 'Rim',
+        type = Material,
+        description = 'Select the bin rim segmentation material',
+        update = update_seg_colors
+    ) 
+
+    grease_mat: PointerProperty(
+        name = 'Grease',
+        type = Material,
+        description = 'Select the grease segmentation material',
+        update = update_seg_colors
+    ) 
+
     bin_interior: FloatVectorProperty(
         name="Bin Interior Color",
         subtype='COLOR',
         default=(0.0, 0.0, 1.0),  
         min=0.0, max=1.0,
-        description="Select the color for the bin interior"
+        description="Select the color for the bin interior",
+        update=update_seg_material_colors
     )
 
     bin_exterior: FloatVectorProperty(
@@ -116,7 +179,8 @@ class SegmentationColorsElements(PropertyGroup):
         subtype='COLOR',
         default=(0.0, 1.0, 1.0),  
         min=0.0, max=1.0,
-        description="Select the color for the bin exterior"
+        description="Select the color for the bin exterior",
+        update=update_seg_material_colors
     )
 
     bin_rim: FloatVectorProperty(
@@ -124,7 +188,8 @@ class SegmentationColorsElements(PropertyGroup):
         subtype='COLOR',
         default=(1.0, 0.0, 0.0),  
         min=0.0, max=1.0,
-        description="Select the color for the bin rim"
+        description="Select the color for the bin rim",
+        update=update_seg_material_colors
     )
 
     grease: FloatVectorProperty(
@@ -132,7 +197,8 @@ class SegmentationColorsElements(PropertyGroup):
         subtype='COLOR',
         default=(1.0, 1.0, 0.0),  
         min=0.0, max=1.0,
-        description="Select the color for the grease"
+        description="Select the color for the grease",
+        update=update_seg_material_colors
     )
 
 class MaterialElements(PropertyGroup):
@@ -170,12 +236,22 @@ class MaterialElements(PropertyGroup):
     ) 
 
 class ParameterSettingsElements(PropertyGroup):
-    liquid_level: IntProperty(
-        name = 'Liquid Level',
+    starting_liquid_level: IntProperty(
+        name = 'Starting Liquid Level',
         default = 100,
         min = 0,
         max = 100,
-        subtype = 'PERCENTAGE'
+        subtype = 'PERCENTAGE',
+        update=update_render_btn
+    ) 
+
+    liquid_level_step: IntProperty(
+        name = 'Liquid Level step',
+        default = 20,
+        min = 1,
+        max = 100,
+        subtype = 'FACTOR',
+        update = update_render_btn
     ) 
 
     azimuth_step: IntProperty(
@@ -187,11 +263,11 @@ class ParameterSettingsElements(PropertyGroup):
         update = update_render_btn
     ) 
 
-    elevation_step: IntProperty(
-        name = 'Elevation Step',
+    starting_elevation: IntProperty(
+        name = 'Starting Elevation',
         default = 10,
         min = 1,
-        max = 360,
+        max = 90,
         subtype = 'FACTOR',
         update = update_render_btn
     ) 
@@ -201,6 +277,15 @@ class ParameterSettingsElements(PropertyGroup):
         default = 60,
         min = 0,
         max = 90,
+        subtype = 'FACTOR',
+        update = update_render_btn
+    ) 
+
+    elevation_step: IntProperty(
+        name = 'Elevation Step',
+        default = 10,
+        min = 1,
+        max = 360,
         subtype = 'FACTOR',
         update = update_render_btn
     ) 

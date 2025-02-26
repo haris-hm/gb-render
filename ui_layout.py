@@ -43,18 +43,26 @@ class VIEW3D_PT_seg_colors(Panel):
         layout = self.layout
         props = ctx.scene.segmentation_colors_elements
 
+        layout.label(text="Select Segmentation Materials:")
+        box = layout.box()
+        row = box.row()
+        row.prop(props, "bin_int_mat", text="Bin Interior Material")
+        row = box.row()
+        row.prop(props, "bin_ext_mat", text="Bin Exterior Material")
+        row = box.row()
+        row.prop(props, "bin_rim_mat", text="Bin Rim Material")
+        row = box.row()
+        row.prop(props, "grease_mat", text="Grease Material")
+
         layout.label(text="Configure Colors:")
         box = layout.box()
 
         row = box.row()
         row.prop(props, "bin_interior", text="Bin Interior")
-
         row = box.row()
         row.prop(props, "bin_exterior", text="Bin Exterior")
-
         row = box.row()
         row.prop(props, "bin_rim", text="Bin Rim")
-
         row = box.row()
         row.prop(props, "grease", text="Grease")
         
@@ -146,36 +154,48 @@ class WM_OT_parameter_tuning(Operator):
         layout.label(text="Grease Settings:")
         box = layout.box()
         row = box.row()
-        row.label(text="Liquid Level:", icon='DOT')
-        row.prop(props, 'liquid_level')
+        row.label(text="Starting Liquid Level:", icon='RIGID_BODY')
+        row.prop(props, 'starting_liquid_level')
+
+        row = box.row()
+        row.label(text="Liquid Level Step:", icon='TRACKING_BACKWARDS_SINGLE')
+        row.prop(props, 'liquid_level_step')
 
         layout.separator(factor= 1)
 
         layout.label(text="Camera Movement (Extrinsic):")
         box = layout.box()
-        row = box.row()
+        box.label(text="Azimuth Settings:")
+        azimuth_settings = box.box()
+        row = azimuth_settings.row()
         row.label(text= "Azimuth Step:", icon = 'ARROW_LEFTRIGHT')
         row.prop(props, "azimuth_step")
 
-        row = box.row()
-        row.label(text= "Elevation Step:", icon = 'EVENT_UP_ARROW')
-        row.prop(props, "elevation_step")
+        box.label(text="Elevation Settings")
+        elevation_settings = box.box()
+        row = elevation_settings.row()
+        row.label(text= "Starting Elevation:", icon = 'DOT')
+        row.prop(props, "starting_elevation")
 
-        row = box.row()
+        row = elevation_settings.row()
         row.label(text= "Max Elevation:", icon = 'EMPTY_SINGLE_ARROW')
         row.prop(props, "max_elevation")
 
-        layout.separator(factor= 1)
+        row = elevation_settings.row()
+        row.label(text= "Elevation Step:", icon = 'EVENT_UP_ARROW')
+        row.prop(props, "elevation_step")
 
-        row = box.row()
+        box.label(text="Zoom Settings")
+        zoom_settings = box.box()
+        row = zoom_settings.row()
         row.label(text= "Starting Zoom:", icon = 'ZOOM_ALL')
         row.prop(props, "starting_zoom")
 
-        row = box.row()
+        row = zoom_settings.row()
         row.label(text= "Zoom Step:", icon = 'ZOOM_IN')
         row.prop(props, "zoom_step")
 
-        row = box.row()
+        row = zoom_settings.row()
         row.label(text= "Zoom Levels:", icon = 'ZOOM_SELECTED')
         row.prop(props, "zoom_levels")
 
