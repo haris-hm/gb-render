@@ -49,6 +49,7 @@ class RenderConfig():
 
         # Segmentation colors
         self.segmentation_colors: dict[str, tuple[int]] = {
+            'background': (0,0,0),
             'bin_interior': tuple(seg_props.bin_interior),
             'bin_exterior': tuple(seg_props.bin_exterior),
             'bin_rim': tuple(seg_props.bin_rim),

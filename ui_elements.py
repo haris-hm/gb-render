@@ -60,6 +60,32 @@ def update_render_btn(self, ctx: Context):
                 if region.type == 'UI':
                     region.tag_redraw()
 
+def update_seg_colors(self, context):
+    def get_rgb_color(material):
+        if material and material.node_tree:
+            for node in material.node_tree.nodes:
+                if node.type == 'RGB':
+                    return node.outputs[0].default_value[:3]
+        return (0.0, 0.0, 0.0)
+
+    self.bin_interior = get_rgb_color(self.bin_int_mat)
+    self.bin_exterior = get_rgb_color(self.bin_ext_mat)
+    self.bin_rim = get_rgb_color(self.bin_rim_mat)
+    self.grease = get_rgb_color(self.grease_mat)
+
+def update_seg_material_colors(self, context):
+    def set_rgb_color(material, color):
+        if material and material.node_tree:
+            for node in material.node_tree.nodes:
+                if node.type == 'RGB':
+                    # Set the RGB color with alpha 1.0
+                    node.outputs[0].default_value = (*color, 1.0)  
+
+    set_rgb_color(self.bin_int_mat, self.bin_interior)
+    set_rgb_color(self.bin_ext_mat, self.bin_exterior)
+    set_rgb_color(self.bin_rim_mat, self.bin_rim)
+    set_rgb_color(self.grease_mat, self.grease)
+
 class ObjectSelectionElements(PropertyGroup):
     grease: PointerProperty(
         name = 'Bin',
@@ -111,12 +137,41 @@ class ObjectSelectionElements(PropertyGroup):
     ) 
 
 class SegmentationColorsElements(PropertyGroup):
+    bin_int_mat: PointerProperty(
+        name = 'Interior',
+        type = Material,
+        description = 'Select the bin interior segmentation material',
+        update = update_seg_colors
+    ) 
+
+    bin_ext_mat: PointerProperty(
+        name = 'Exterior',
+        type = Material,
+        description = 'Select the bin exterior segmentation material',
+        update = update_seg_colors
+    ) 
+
+    bin_rim_mat: PointerProperty(
+        name = 'Rim',
+        type = Material,
+        description = 'Select the bin rim segmentation material',
+        update = update_seg_colors
+    ) 
+
+    grease_mat: PointerProperty(
+        name = 'Grease',
+        type = Material,
+        description = 'Select the grease segmentation material',
+        update = update_seg_colors
+    ) 
+
     bin_interior: FloatVectorProperty(
         name="Bin Interior Color",
         subtype='COLOR',
         default=(0.0, 0.0, 1.0),  
         min=0.0, max=1.0,
-        description="Select the color for the bin interior"
+        description="Select the color for the bin interior",
+        update=update_seg_material_colors
     )
 
     bin_exterior: FloatVectorProperty(
@@ -124,7 +179,8 @@ class SegmentationColorsElements(PropertyGroup):
         subtype='COLOR',
         default=(0.0, 1.0, 1.0),  
         min=0.0, max=1.0,
-        description="Select the color for the bin exterior"
+        description="Select the color for the bin exterior",
+        update=update_seg_material_colors
     )
 
     bin_rim: FloatVectorProperty(
@@ -132,7 +188,8 @@ class SegmentationColorsElements(PropertyGroup):
         subtype='COLOR',
         default=(1.0, 0.0, 0.0),  
         min=0.0, max=1.0,
-        description="Select the color for the bin rim"
+        description="Select the color for the bin rim",
+        update=update_seg_material_colors
     )
 
     grease: FloatVectorProperty(
@@ -140,7 +197,8 @@ class SegmentationColorsElements(PropertyGroup):
         subtype='COLOR',
         default=(1.0, 1.0, 0.0),  
         min=0.0, max=1.0,
-        description="Select the color for the grease"
+        description="Select the color for the grease",
+        update=update_seg_material_colors
     )
 
 class MaterialElements(PropertyGroup):

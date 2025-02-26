@@ -43,18 +43,26 @@ class VIEW3D_PT_seg_colors(Panel):
         layout = self.layout
         props = ctx.scene.segmentation_colors_elements
 
+        layout.label(text="Select Segmentation Materials:")
+        box = layout.box()
+        row = box.row()
+        row.prop(props, "bin_int_mat", text="Bin Interior Material")
+        row = box.row()
+        row.prop(props, "bin_ext_mat", text="Bin Exterior Material")
+        row = box.row()
+        row.prop(props, "bin_rim_mat", text="Bin Rim Material")
+        row = box.row()
+        row.prop(props, "grease_mat", text="Grease Material")
+
         layout.label(text="Configure Colors:")
         box = layout.box()
 
         row = box.row()
         row.prop(props, "bin_interior", text="Bin Interior")
-
         row = box.row()
         row.prop(props, "bin_exterior", text="Bin Exterior")
-
         row = box.row()
         row.prop(props, "bin_rim", text="Bin Rim")
-
         row = box.row()
         row.prop(props, "grease", text="Grease")
         
