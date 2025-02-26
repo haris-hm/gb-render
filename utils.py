@@ -92,8 +92,7 @@ class RenderConfig():
                 'height': self.height,
                 'sample_amount': self.sample_amount,
                 'mask_prefix': self.mask_prefix,
-                'image_prefix': self.image_prefix,
-                'masks_denoised': False
+                'image_prefix': self.image_prefix
             }
         }
 
