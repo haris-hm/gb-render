@@ -19,13 +19,19 @@ class RenderConfig():
         seg_props = scene.segmentation_colors_elements
 
         # Scene Settings
-        self.liquid_level: int = param_props.liquid_level
+        self.starting_liquid_level: int = param_props.starting_liquid_level
+        self.liquid_level_step: int = param_props.liquid_level_step
+
         self.azimuth_step: int = param_props.azimuth_step
-        self.elevation_step: int = param_props.elevation_step
+
+        self.starting_elevation: int = param_props.starting_elevation
         self.max_elevation: int = param_props.max_elevation
+        self.elevation_step: int = param_props.elevation_step
+
         self.starting_zoom: int = param_props.starting_zoom
         self.zoom_step: int = param_props.zoom_step
         self.zoom_levels: int = param_props.zoom_levels
+
         self.focal_length: int = param_props.focal_length
 
         # Render Settings
@@ -73,7 +79,7 @@ class RenderConfig():
 
         metadata = {
             'dataset_name': self.dataset_name,
-            'liquid_level': self.liquid_level,
+            'liquid_levels': [i for i in range(0, 101, self.liquid_level_step)],
             'azimuth_step': self.azimuth_step,
             'elevation_step': self.elevation_step,
             'max_elevation': self.max_elevation,
@@ -92,8 +98,7 @@ class RenderConfig():
                 'height': self.height,
                 'sample_amount': self.sample_amount,
                 'mask_prefix': self.mask_prefix,
-                'image_prefix': self.image_prefix,
-                'masks_denoised': False
+                'image_prefix': self.image_prefix
             }
         }
 
@@ -107,11 +112,12 @@ class FrameData():
     __grease: Object = None
     __bin_cutter_location: float = 0
 
-    def __init__(self, scene: Scene, cfg: RenderConfig, azimuth: int=0, elevation: int=0, zoom: float=1.0):
+    def __init__(self, scene: Scene, cfg: RenderConfig, azimuth: int=0, elevation: int=0, zoom: float=1.0, liquid_level: int=100):
         self.__scene = scene
         self.__azimuth = azimuth
         self.__elevation = elevation
         self.__zoom = zoom
+        self.__liquid_level = liquid_level
         self.__cfg = cfg
 
         self.__get_scene_objects()
@@ -137,6 +143,7 @@ class FrameData():
         self.__camera_track.keyframe_insert(data_path="rotation_euler", index=2, frame=frame_num)
         self.__camera_track.keyframe_insert(data_path="scale", frame=frame_num)
         self.__bin_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
+        self.__seg_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
 
     def __get_scene_objects(self):
         objects: dict[str, Object] = get_objects(self.__scene)
@@ -145,10 +152,10 @@ class FrameData():
         self.__bin_cutter = objects['bin_cutter']
         self.__seg_cutter = objects['seg_cutter']
         self.__grease = objects['grease']
-        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__cfg.liquid_level*.01)
+        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
 
     def __repr__(self) -> str:
-        return f'Frame: <Azimuth: {self.__azimuth}, Elevation: {self.__elevation}, Zoom: {self.__zoom}>'
+        return f'Frame: <Azimuth: {self.__azimuth}, Elevation: {self.__elevation}, Zoom: {self.__zoom}, Liquid Level: {self.__liquid_level}>'
 
 class RenderQueue():
     def __init__(self, *items: FrameData):
@@ -182,6 +189,9 @@ class RenderQueue():
     
     def max_length(self) -> int:
         return self.__max_len
+
+    def __getitem__(self, i: int) -> FrameData:
+        return self.__queue[i]
         
     def __len__(self) -> int:
         return self.__length
@@ -369,24 +379,34 @@ def create_frames(scene: Scene) -> RenderQueue:
     max_zoom: float = cfg.starting_zoom + (cfg.zoom_levels - 1)*cfg.zoom_step
 
     curr_zoom: float = cfg.starting_zoom
-    curr_azimuth: int = 0
+    curr_azimuth: int = cfg.starting_elevation
     curr_elevation: int = 0
+    liquid_level = 0
 
-    while curr_zoom <= max_zoom:
-        while curr_elevation <= cfg.max_elevation:
-            while curr_azimuth < 360:
-                frame_data: FrameData = FrameData(scene, cfg, curr_azimuth, curr_elevation, curr_zoom)
-                frames.add(frame_data)
+    while liquid_level < 100:
+        liquid_level = min((liquid_level + cfg.liquid_level_step), 100)
 
-                curr_azimuth += cfg.azimuth_step
+        while curr_zoom <= max_zoom:
+            while curr_elevation <= cfg.max_elevation:
+                while curr_azimuth < 360:
+                    frame_data: FrameData = FrameData(scene, cfg, curr_azimuth, curr_elevation, curr_zoom, liquid_level)
+                    frames.add(frame_data)
 
-            curr_elevation += cfg.elevation_step
+                    curr_azimuth += cfg.azimuth_step
+
+                curr_elevation += cfg.elevation_step
+                curr_azimuth = 0
+
+            curr_zoom += cfg.zoom_step
+            curr_elevation = cfg.starting_elevation
             curr_azimuth = 0
 
-        curr_zoom += cfg.zoom_step
+        curr_zoom = cfg.starting_zoom
+        curr_elevation = cfg.starting_elevation
         curr_azimuth = 0
-        curr_elevation = 0
 
+    print(f'First frame: {frames[0]}')
+    print(f'Last frame: {frames[len(frames)-1]}')
     print(f'Rendering {len(frames)} frames.')
         
     return frames

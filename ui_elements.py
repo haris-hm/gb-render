@@ -31,15 +31,23 @@ def update_render_btn(self, ctx: Context):
     # Access properties from their respective classes
     azimuth_step = ctx.scene.parameter_settings_elements.azimuth_step
 
-    elevation_step = ctx.scene.parameter_settings_elements.elevation_step
+    starting_elevation = ctx.scene.parameter_settings_elements.starting_elevation
     max_elevation = ctx.scene.parameter_settings_elements.max_elevation
+    elevation_step = ctx.scene.parameter_settings_elements.elevation_step
 
     zoom_levels = ctx.scene.parameter_settings_elements.zoom_levels
+
+    starting_liquid_level = ctx.scene.parameter_settings_elements.starting_liquid_level
+    liquid_level_step = ctx.scene.parameter_settings_elements.liquid_level_step
 
     render_sequence = ctx.scene.render_settings_elements.render_sequence
 
     # Calculate the estimated number of frames
-    estimate = (360 / azimuth_step) * ((max_elevation // elevation_step) + 1) * zoom_levels
+    azimuths_rendered: float = 360 / azimuth_step
+    elevations_rendered: int = ((max_elevation-starting_elevation) // elevation_step) + 1
+    liquid_levels: int = ((100-starting_liquid_level) / liquid_level_step) + 1
+
+    estimate = azimuths_rendered * elevations_rendered * zoom_levels * liquid_levels
     if int(render_sequence) == 0:
         estimate *= 2
         
@@ -170,12 +178,22 @@ class MaterialElements(PropertyGroup):
     ) 
 
 class ParameterSettingsElements(PropertyGroup):
-    liquid_level: IntProperty(
-        name = 'Liquid Level',
+    starting_liquid_level: IntProperty(
+        name = 'Starting Liquid Level',
         default = 100,
         min = 0,
         max = 100,
-        subtype = 'PERCENTAGE'
+        subtype = 'PERCENTAGE',
+        update=update_render_btn
+    ) 
+
+    liquid_level_step: IntProperty(
+        name = 'Liquid Level step',
+        default = 20,
+        min = 1,
+        max = 100,
+        subtype = 'FACTOR',
+        update = update_render_btn
     ) 
 
     azimuth_step: IntProperty(
@@ -187,11 +205,11 @@ class ParameterSettingsElements(PropertyGroup):
         update = update_render_btn
     ) 
 
-    elevation_step: IntProperty(
-        name = 'Elevation Step',
+    starting_elevation: IntProperty(
+        name = 'Starting Elevation',
         default = 10,
         min = 1,
-        max = 360,
+        max = 90,
         subtype = 'FACTOR',
         update = update_render_btn
     ) 
@@ -201,6 +219,15 @@ class ParameterSettingsElements(PropertyGroup):
         default = 60,
         min = 0,
         max = 90,
+        subtype = 'FACTOR',
+        update = update_render_btn
+    ) 
+
+    elevation_step: IntProperty(
+        name = 'Elevation Step',
+        default = 10,
+        min = 1,
+        max = 360,
         subtype = 'FACTOR',
         update = update_render_btn
     ) 

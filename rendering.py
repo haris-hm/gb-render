@@ -134,3 +134,4 @@ class RENDER_OT_render(Operator):
             print('Rendering Masks')
             self.curr_frame_type = FrameType.MASK
             animation.render(FrameType.MASK)
+            
