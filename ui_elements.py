@@ -375,3 +375,12 @@ class RenderSettingsElements(PropertyGroup):
         default = '0',
         update = update_render_btn
     )  
+
+    subset_size: FloatProperty(
+        name = 'Subset Size',
+        default = 1.0,
+        min = 0.01,
+        max = 1.0,
+        subtype = 'FACTOR',
+        update=update_render_btn
+    )

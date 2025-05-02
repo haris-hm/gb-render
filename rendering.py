@@ -76,13 +76,7 @@ class RENDER_OT_render(Operator):
             print('rendered masks')
             return 
         
-        bpy.app.handlers.render_pre.remove(self.pre)
-        bpy.app.handlers.render_post.remove(self.post)
-        bpy.app.handlers.render_cancel.remove(self.cancelled)
-        bpy.app.handlers.render_complete.remove(self.complete)
-        bpy.app.handlers.render_write.remove(self.render_write)
-
-        self.context.window_manager.event_timer_remove(self.timer)
+        self.__cleanup_handlers(ctx)
 
         self.animation.create_metadata()
 
@@ -100,14 +94,7 @@ class RENDER_OT_render(Operator):
         if event.type == 'TIMER':
             if self.stop: 
                 print('Animation rendering cancelled')
-                bpy.app.handlers.render_pre.remove(self.pre)
-                bpy.app.handlers.render_post.remove(self.post)
-                bpy.app.handlers.render_cancel.remove(self.cancelled)
-                bpy.app.handlers.render_complete.remove(self.complete)
-                bpy.app.handlers.render_write.remove(self.render_write)
-
-                ctx.window_manager.event_timer_remove(self.timer)
-                
+                self.__cleanup_handlers(ctx)              
                 return {"FINISHED"}
             elif not self.rendering and self.seq_code == 0:
                 if not self.masks_rendered:
@@ -118,6 +105,15 @@ class RENDER_OT_render(Operator):
                     self.images_rendered = True
                 
         return {"PASS_THROUGH"}
+    
+    def __cleanup_handlers(self, ctx: Context):
+        bpy.app.handlers.render_pre.remove(self.pre)
+        bpy.app.handlers.render_post.remove(self.post)
+        bpy.app.handlers.render_cancel.remove(self.cancelled)
+        bpy.app.handlers.render_complete.remove(self.complete)
+        bpy.app.handlers.render_write.remove(self.render_write)
+
+        ctx.window_manager.event_timer_remove(self.timer)
     
     def __is_path_valid(self, path) -> bool:
         if (os.path.exists(path) and os.path.isdir(os.path.abspath(path)) and path != ''):

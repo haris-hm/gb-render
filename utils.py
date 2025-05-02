@@ -6,6 +6,8 @@ import json
 
 from bpy.types import Scene, Object, Context, Collection
 from enum import Enum
+from typing import Self
+from random import sample
 
 class FrameType(Enum):
     MASK = 'mask'
@@ -44,6 +46,7 @@ class RenderConfig():
         self.mask_prefix: str = render_props.mask_prefix
         self.image_prefix: str = render_props.image_prefix
         self.sample_amount: int = render_props.sample_amount
+        self.subset_size: float = render_props.subset_size
         self.width: int = render_props.width
         self.height: int = render_props.height
 
@@ -190,6 +193,17 @@ class RenderQueue():
     
     def max_length(self) -> int:
         return self.__max_len
+    
+    def random_subset(self, size: float=0.5) -> Self:
+        if size > 1 or size < 0:
+            raise ValueError('Size must be between 0 and 1.')
+        
+        subset_size: int = int(self.max_length()*size)
+        subset: list[FrameData] = sample(self.__queue, subset_size)
+
+        subset_queue: RenderQueue = RenderQueue(*subset)
+
+        return subset_queue
 
     def __getitem__(self, i: int) -> FrameData:
         return self.__queue[i]
@@ -365,6 +379,7 @@ def get_objects(scene: Scene) -> dict[str, Object | Collection]:
 
 def create_frames(scene: Scene) -> RenderQueue:
     cfg: RenderConfig = RenderConfig(scene)
+    print(cfg.subset_size)
 
     # Creating Directories
     if not os.path.exists(cfg.dataset_folder):
@@ -376,6 +391,9 @@ def create_frames(scene: Scene) -> RenderQueue:
 
     # Loop variables
     frames: RenderQueue = RenderQueue()
+
+    if cfg.subset_size < 1.0:
+        frames = frames.random_subset(cfg.subset_size)
 
     max_zoom: float = cfg.starting_zoom + (cfg.zoom_levels - 1)*cfg.zoom_step
 

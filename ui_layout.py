@@ -249,6 +249,8 @@ class WM_OT_render_settings(Operator):
         row.prop(props, 'height')
         row = box.row()
         row.prop(props, 'sample_amount')
+        row = box.row()
+        row.prop(props, 'subset_size')
 
         row = layout.row()
         row.label(text='Render Sequence')
