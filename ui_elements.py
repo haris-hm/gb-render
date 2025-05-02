@@ -40,6 +40,8 @@ def update_render_btn(self, ctx: Context):
     starting_liquid_level = ctx.scene.parameter_settings_elements.starting_liquid_level
     liquid_level_step = ctx.scene.parameter_settings_elements.liquid_level_step
 
+    subset_size = ctx.scene.render_settings_elements.subset_size
+
     render_sequence = ctx.scene.render_settings_elements.render_sequence
 
     # Calculate the estimated number of frames
@@ -47,7 +49,7 @@ def update_render_btn(self, ctx: Context):
     elevations_rendered: int = ((max_elevation-starting_elevation) // elevation_step) + 1
     liquid_levels: int = ((100-starting_liquid_level) / liquid_level_step) + 1
 
-    estimate = azimuths_rendered * elevations_rendered * zoom_levels * liquid_levels
+    estimate = int((azimuths_rendered * elevations_rendered * zoom_levels * liquid_levels) * subset_size)
     if int(render_sequence) == 0:
         estimate *= 2
         
