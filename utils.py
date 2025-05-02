@@ -162,7 +162,7 @@ class FrameData():
         return f'Frame: <Azimuth: {self.__azimuth}, Elevation: {self.__elevation}, Zoom: {self.__zoom}, Liquid Level: {self.__liquid_level}>'
 
 class RenderQueue():
-    def __init__(self, *items: FrameData):
+    def __init__(self, items: FrameData=[]):
         self.__queue: list[FrameData] = []
         self.__length: int = 0
         self.__max_len: int = 0
@@ -201,7 +201,7 @@ class RenderQueue():
         subset_size: int = int(self.max_length()*size)
         subset: list[FrameData] = sample(self.__queue, subset_size)
 
-        subset_queue: RenderQueue = RenderQueue(*subset)
+        subset_queue: RenderQueue = RenderQueue(items=subset)
 
         return subset_queue
 
@@ -392,9 +392,6 @@ def create_frames(scene: Scene) -> RenderQueue:
     # Loop variables
     frames: RenderQueue = RenderQueue()
 
-    if cfg.subset_size < 1.0:
-        frames = frames.random_subset(cfg.subset_size)
-
     max_zoom: float = cfg.starting_zoom + (cfg.zoom_levels - 1)*cfg.zoom_step
 
     curr_zoom: float = cfg.starting_zoom
@@ -424,8 +421,11 @@ def create_frames(scene: Scene) -> RenderQueue:
         curr_elevation = cfg.starting_elevation
         curr_azimuth = 0
 
-    print(f'First frame: {frames[0]}')
-    print(f'Last frame: {frames[len(frames)-1]}')
+    if cfg.subset_size < 1.0:
+        frames = frames.random_subset(cfg.subset_size)
+
+    print(f'{frames=}')
+
     print(f'Rendering {len(frames)} frames.')
         
     return frames
