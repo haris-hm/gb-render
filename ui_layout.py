@@ -3,7 +3,7 @@ import bpy
 # from bpy.props import *
 from bpy.types import Panel, Context, Scene, Material, Operator, Event
 
-from .ui_elements import ObjectSelectionElements, ParameterSettingsElements, RenderSettingsElements, DataElements
+from .ui_elements import ObjectSelectionElements, ParameterSettingsElements, RenderSettingsElements, DataElements, EnvironmentsDropdown
 
 class VIEW3D_PT_assets(Panel):
     bl_idname = "VIEW3D_PT_assets"
@@ -14,8 +14,19 @@ class VIEW3D_PT_assets(Panel):
 
     def draw(self, ctx: Context):
         layout = self.layout
+        props = ctx.scene.environment_dropdown
+
         row = layout.row()
         row.operator("asset.add_bin", text='Import Bin', icon="IMPORT")
+        layout.label(text="Select an Environment:")
+        layout.prop(props, "dropdown_option", text="")
+
+    def register():
+        Scene.environment_dropdown = bpy.props.PointerProperty(type=EnvironmentsDropdown)
+
+    def unregister():
+        del Scene.environment_dropdown
+
 
 class VIEW3D_PT_objects(Panel):
     bl_idname = "VIEW3D_PT_objects"

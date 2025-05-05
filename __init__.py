@@ -20,18 +20,20 @@ bl_info = {
     'category': 'gb-research'
 }
 
-import bpy  # noqa: E402
+import bpy 
 
-from . import rendering, ui_elements, ui_layout, asset_manager  # noqa: E402
+from . import rendering, ui_elements, ui_layout, asset_manager 
+from .asset_manager import load_all_assets
 
 CLASSES = (
     ui_elements.DataElements, 
     ui_elements.ObjectSelectionElements,
     ui_elements.ParameterSettingsElements,
     ui_elements.RenderSettingsElements,
+    ui_elements.QueriedMaterialItem,
+    ui_elements.QueriedSegmentationItem,
+    ui_elements.EnvironmentsDropdown,
     rendering.RENDER_OT_render,
-    asset_manager.QueriedMaterialItem,
-    asset_manager.QueriedSegmentationItem,
     asset_manager.ASSET_OT_add_bin,
     asset_manager.ASSET_OT_query_materials,
     asset_manager.ASSET_OT_query_seg_materials,
@@ -50,6 +52,9 @@ def register():
 
         if hasattr(c, 'register') and callable(c.register):
             c.register()
+            
+    # Delay execution slightly to ensure bpy.data is fully available
+    bpy.app.timers.register(load_all_assets, first_interval=1.0)
     
 def unregister():
     for c in reversed(CLASSES):
@@ -60,3 +65,4 @@ def unregister():
     
 if __name__ == '__main__':
     register()
+    

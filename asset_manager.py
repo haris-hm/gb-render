@@ -1,10 +1,9 @@
 import bpy
 import os
 
-from bpy.types import Object, Collection, Material, Operator, Scene, Context, PropertyGroup
-from bpy.props import PointerProperty
+from bpy.types import Object, Collection, Operator, Context
 
-from .ui_elements import update_ui
+from .ui_elements import update_ui, QueriedMaterialItem, QueriedSegmentationItem
 
 def get_all_objects_in_collection(collection: Collection) -> list[Object]:
     objects = list(collection.objects)  # Get objects directly in the collection
@@ -41,26 +40,36 @@ def localize_objects(objects: list[Object]):
                         copied_materials[original_material.name] = local_material
                         slot.material = local_material
 
-def get_asset_paths(type: str) -> list[str]:
+def get_asset_paths(type: str) -> dict[str, str]:
     plugin_dir: str = os.path.dirname(os.path.abspath(__file__))
     assets_dir: str = os.path.join(plugin_dir, f'assets/{type}')    
 
     if not os.path.exists(assets_dir):
         raise FileNotFoundError(f"Assets directory '{assets_dir}' does not exist.")
         
-    asset_paths = [os.path.join(assets_dir, asset) for asset in os.listdir(assets_dir)]
+    asset_paths = {asset: os.path.join(assets_dir, asset) for asset in os.listdir(assets_dir)}
     return asset_paths
 
-def append_bin() -> Collection:
-    bin_path = get_asset_paths("bin")
-    bin_path = bin_path[0] 
+def load_assets(paths: dict[str, str], type: str):
+    for file_name, path in paths.items():
+        name: str = file_name.split('.')[0]
+        with bpy.data.libraries.load(path, link=False) as (data_from, data_to):
+            if type == 'collection':
+                if name in data_from.collections:
+                    data_to.collections.append(name)
+                else:
+                    raise ValueError(f"'{name}' collection not found in {path}. Make sure the collection being appended is named the same as the file.")
+            elif type == 'object':
+                if name in data_from.objects:
+                    data_to.objects.append(name)
+                else:
+                    raise ValueError(f"'{name}' not found in {path}. Make sure the object being appended is named the same as the file.")
 
-    with bpy.data.libraries.load(bin_path, link=False) as (data_from, data_to):
-        if "camera_and_bin" in data_from.collections:
-            data_to.collections.append("camera_and_bin")
-        else:
-            raise ValueError(f"'camera_and_bin' collection not found in {bin_path}")
-        
+def load_all_assets():
+    load_assets(get_asset_paths("bin"), 'collection')
+    load_assets(get_asset_paths("environments"), 'object')
+
+def append_bin() -> Collection:        
     # Get the appended collection
     bin_collection = bpy.data.collections.get("camera_and_bin")
     if not bin_collection:
@@ -91,12 +100,6 @@ class ASSET_OT_add_bin(Operator):
                         region.tag_redraw()
 
         return {"FINISHED"}
-    
-class QueriedMaterialItem(PropertyGroup):
-    material: PointerProperty(type=Material)
-
-class QueriedSegmentationItem(PropertyGroup):
-    material: PointerProperty(type=Material)
     
 class ASSET_OT_query_materials(Operator):
     bl_idname = "asset.query_materials"

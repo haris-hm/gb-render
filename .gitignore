@@ -5,3 +5,4 @@
 /.venv/
 
 *.blend1
+pyproject.toml

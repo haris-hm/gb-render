@@ -1,7 +1,5 @@
-import bpy
-
-from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty, FloatVectorProperty, CollectionProperty
-from bpy.types import PropertyGroup, Object, Material, Context, Collection
+from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty
+from bpy.types import PropertyGroup, Object, Context, Collection, Material
 from uuid import uuid4
 
 def update_ui(ctx: Context):
@@ -262,4 +260,21 @@ class RenderSettingsElements(PropertyGroup):
         max = 1.0,
         subtype = 'FACTOR',
         update=update_render_btn
+    )
+
+class QueriedMaterialItem(PropertyGroup):
+    material: PointerProperty(type=Material)
+
+class QueriedSegmentationItem(PropertyGroup):
+    material: PointerProperty(type=Material)
+
+class EnvironmentsDropdown(PropertyGroup):
+    def place_environment(self, ctx: Context):
+        pass
+
+    dropdown_option: EnumProperty(
+        name="Environments",
+        description="Select an environment",
+        items=[],
+        update=place_environment
     )
