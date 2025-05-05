@@ -1,9 +1,21 @@
 import bpy
 
 # from bpy.props import *
-from bpy.types import Panel, Context, Scene, Operator, Event, Material
+from bpy.types import Panel, Context, Scene, Material, Operator, Event
 
-from .ui_elements import ObjectSelectionElements, SegmentationColorsElements, MaterialElements, ParameterSettingsElements, RenderSettingsElements, DataElements
+from .ui_elements import ObjectSelectionElements, ParameterSettingsElements, RenderSettingsElements, DataElements
+
+class VIEW3D_PT_assets(Panel):
+    bl_idname = "VIEW3D_PT_assets"
+    bl_label = "Assets"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "GB-Assets"
+
+    def draw(self, ctx: Context):
+        layout = self.layout
+        row = layout.row()
+        row.operator("asset.add_bin", text='Import Bin', icon="IMPORT")
 
 class VIEW3D_PT_objects(Panel):
     bl_idname = "VIEW3D_PT_objects"
@@ -41,37 +53,26 @@ class VIEW3D_PT_seg_colors(Panel):
 
     def draw(self, ctx: Context):
         layout = self.layout
-        props = ctx.scene.segmentation_colors_elements
 
-        layout.label(text="Select Segmentation Materials:")
-        box = layout.box()
-        row = box.row()
-        row.prop(props, "bin_int_mat", text="Bin Interior Material")
-        row = box.row()
-        row.prop(props, "bin_ext_mat", text="Bin Exterior Material")
-        row = box.row()
-        row.prop(props, "bin_rim_mat", text="Bin Rim Material")
-        row = box.row()
-        row.prop(props, "grease_mat", text="Grease Material")
+        row = layout.row()
+        row.operator("asset.query_seg_materials", text='Query Segmentation Materials', icon="HELP")        
 
-        layout.label(text="Configure Colors:")
-        box = layout.box()
+        # Display the queried materials
+        queried_seg_materials = ctx.scene.queried_seg_materials
+        if queried_seg_materials:
+            for item in queried_seg_materials:
+                box = layout.box()
+                box.label(text=item.material.name)
+                self.display_rgb_node(item.material, box)
 
-        row = box.row()
-        row.prop(props, "bin_interior", text="Bin Interior")
-        row = box.row()
-        row.prop(props, "bin_exterior", text="Bin Exterior")
-        row = box.row()
-        row.prop(props, "bin_rim", text="Bin Rim")
-        row = box.row()
-        row.prop(props, "grease", text="Grease")
-        
-
-    def register():
-        Scene.segmentation_colors_elements = bpy.props.PointerProperty(type=SegmentationColorsElements)
-
-    def unregister():
-        del Scene.segmentation_colors_elements
+    def display_rgb_node(self, material: Material, layout):
+        """
+        Display the RGB node's color input socket for the given material.
+        """
+        if material and material.use_nodes:
+            for node in material.node_tree.nodes:
+                if node.type == 'RGB':  # Check if the node is an RGB node
+                    layout.prop(node.outputs[0], "default_value", text="Color")
 
 class VIEW3D_PT_materials(Panel):
     bl_idname = "VIEW3D_PT_materials"
@@ -82,45 +83,24 @@ class VIEW3D_PT_materials(Panel):
 
     def draw(self, ctx: Context):
         layout = self.layout
-        mat_props = ctx.scene.material_elements
 
-        layout.label(text="Select Materials:")
-        box = layout.box()
-        row = box.row()
-        row.prop(mat_props, "bin_int_mat", text="Interior")
-        self.display_nodes_for_mat(mat_props.bin_int_mat, mat_props.bin_int_group, "bin_int_group", mat_props, box)
+        row = layout.row()
+        row.operator("asset.query_materials", text='Query Materials', icon="HELP")        
 
-        box = layout.box()
-        row = box.row()
-        row.prop(mat_props, "bin_ext_mat", text="Exterior")
-        self.display_nodes_for_mat(mat_props.bin_ext_mat, mat_props.bin_ext_group, "bin_ext_group", mat_props, box)
-        
-        box = layout.box()
-        row = box.row()
-        row.prop(mat_props, "grease_mat", text="Grease")
-        self.display_nodes_for_mat(mat_props.grease_mat, mat_props.grease_group, "grease_group", mat_props, box)
+        # Display the queried materials
+        queried_materials = ctx.scene.queried_materials
+        if queried_materials:
+            for item in queried_materials:
+                box = layout.box()
+                box.label(text=item.material.name)
+                self.display_nodes_for_mat(item.material, 'settings', box)
 
-    def display_nodes_for_mat(self, material: Material, group: str, group_name: str, props: MaterialElements, layout):
+    def display_nodes_for_mat(self, material: Material, node_name: str, layout):
         # Display nodes only if a material is selected
         if material and material.use_nodes:
-            # node_tree = material.node_tree
-            
-            # Populate a dropdown with node names from the material's node tree
-            # node_names = [node.name for node in node_tree.nodes]
-            layout.prop_search(props, group_name, material.node_tree, "nodes")
-            
-            # Display node inputs once a node is selected
-            if group:
-                selected_node = self.get_selected_node(material.node_tree, group)
-                if selected_node:
-                    self.draw_node_inputs(layout, selected_node)
-
-    def get_selected_node(self, node_tree, node_name):
-        # Retrieve the selected node by name
-        for node in node_tree.nodes:
-            if node.name == node_name:
-                return node
-        return None
+            for node in material.node_tree.nodes:
+                if node.name == node_name:  # Only display the specified named node
+                    self.draw_node_inputs(layout, node)
 
     def draw_node_inputs(self, layout, node):
         # Display the inputs of the selected node
@@ -130,12 +110,6 @@ class VIEW3D_PT_materials(Panel):
             else:
                 if hasattr(input_socket, 'default_value'):
                     layout.prop(input_socket, "default_value", text=input_socket.name)
-    
-    def register():
-        Scene.material_elements = bpy.props.PointerProperty(type=MaterialElements)
-
-    def unregister():
-        del Scene.material_elements
         
 class WM_OT_parameter_tuning(Operator):
     bl_idname = 'wm.parameter_tuning'

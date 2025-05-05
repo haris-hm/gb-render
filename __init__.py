@@ -22,22 +22,26 @@ bl_info = {
 
 import bpy  # noqa: E402
 
-from . import rendering, ui_elements, ui_layout  # noqa: E402
+from . import rendering, ui_elements, ui_layout, asset_manager  # noqa: E402
 
 CLASSES = (
     ui_elements.DataElements, 
-    ui_elements.ObjectSelectionElements, 
-    ui_elements.SegmentationColorsElements,
-    ui_elements.MaterialElements,
+    ui_elements.ObjectSelectionElements,
     ui_elements.ParameterSettingsElements,
     ui_elements.RenderSettingsElements,
     rendering.RENDER_OT_render,
+    asset_manager.QueriedMaterialItem,
+    asset_manager.QueriedSegmentationItem,
+    asset_manager.ASSET_OT_add_bin,
+    asset_manager.ASSET_OT_query_materials,
+    asset_manager.ASSET_OT_query_seg_materials,
     ui_layout.WM_OT_parameter_tuning, 
     ui_layout.WM_OT_render_settings,
     ui_layout.VIEW3D_PT_objects, 
     ui_layout.VIEW3D_PT_seg_colors,
     ui_layout.VIEW3D_PT_materials,
-    ui_layout.VIEW3D_PT_controls
+    ui_layout.VIEW3D_PT_controls,
+    ui_layout.VIEW3D_PT_assets
 )
     
 def register():

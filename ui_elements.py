@@ -1,31 +1,15 @@
 import bpy
 
-from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty, FloatVectorProperty
+from bpy.props import IntProperty, FloatProperty, BoolProperty, StringProperty, PointerProperty, EnumProperty, FloatVectorProperty, CollectionProperty
 from bpy.types import PropertyGroup, Object, Material, Context, Collection
 from uuid import uuid4
 
-class DataElements(PropertyGroup):  
-    render_estimate: IntProperty(
-        name='Render Estimate',
-        default=int(round((360/10) * ((90/10)+1)))
-    ) 
-
-    render_progress: FloatProperty(
-        name = 'Render Progress',
-        min = 0,
-        max = 1,
-        update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
-    ) 
-
-    show_render_progress: BoolProperty(
-        name = 'Show Render Progress',
-        default = False
-    ) 
-
-    keyframes_generated: BoolProperty(
-        name = 'data_keyframes_generated',
-        default = False
-    ) 
+def update_ui(ctx: Context):
+    for area in ctx.screen.areas:
+        if area.type == 'VIEW_3D':
+            for region in area.regions:
+                if region.type == 'UI':
+                    region.tag_redraw()
 
 def update_render_btn(self, ctx: Context):
     # Access properties from their respective classes
@@ -55,38 +39,30 @@ def update_render_btn(self, ctx: Context):
         
     ctx.scene.gb_data.render_estimate = int(round(estimate))
 
-    # Update the UI
-    for area in ctx.screen.areas:
-        if area.type == 'VIEW_3D':
-            for region in area.regions:
-                if region.type == 'UI':
-                    region.tag_redraw()
+    update_ui(ctx)
 
-def update_seg_colors(self, context):
-    def get_rgb_color(material):
-        if material and material.node_tree:
-            for node in material.node_tree.nodes:
-                if node.type == 'RGB':
-                    return node.outputs[0].default_value[:3]
-        return (0.0, 0.0, 0.0)
+class DataElements(PropertyGroup):  
+    render_estimate: IntProperty(
+        name='Render Estimate',
+        default=int(round((360/10) * ((90/10)+1)))
+    ) 
 
-    self.bin_interior = get_rgb_color(self.bin_int_mat)
-    self.bin_exterior = get_rgb_color(self.bin_ext_mat)
-    self.bin_rim = get_rgb_color(self.bin_rim_mat)
-    self.grease = get_rgb_color(self.grease_mat)
+    render_progress: FloatProperty(
+        name = 'Render Progress',
+        min = 0,
+        max = 1,
+        update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
+    ) 
 
-def update_seg_material_colors(self, context):
-    def set_rgb_color(material, color):
-        if material and material.node_tree:
-            for node in material.node_tree.nodes:
-                if node.type == 'RGB':
-                    # Set the RGB color with alpha 1.0
-                    node.outputs[0].default_value = (*color, 1.0)  
+    show_render_progress: BoolProperty(
+        name = 'Show Render Progress',
+        default = False
+    ) 
 
-    set_rgb_color(self.bin_int_mat, self.bin_interior)
-    set_rgb_color(self.bin_ext_mat, self.bin_exterior)
-    set_rgb_color(self.bin_rim_mat, self.bin_rim)
-    set_rgb_color(self.grease_mat, self.grease)
+    keyframes_generated: BoolProperty(
+        name = 'data_keyframes_generated',
+        default = False
+    ) 
 
 class ObjectSelectionElements(PropertyGroup):
     grease: PointerProperty(
@@ -136,105 +112,6 @@ class ObjectSelectionElements(PropertyGroup):
         type = Collection,
         description = 'Select the segmented bin colleciton',
         update=lambda self, ctx: ctx.area.tag_redraw()  # Update the UI when changed
-    ) 
-
-class SegmentationColorsElements(PropertyGroup):
-    bin_int_mat: PointerProperty(
-        name = 'Interior',
-        type = Material,
-        description = 'Select the bin interior segmentation material',
-        update = update_seg_colors
-    ) 
-
-    bin_ext_mat: PointerProperty(
-        name = 'Exterior',
-        type = Material,
-        description = 'Select the bin exterior segmentation material',
-        update = update_seg_colors
-    ) 
-
-    bin_rim_mat: PointerProperty(
-        name = 'Rim',
-        type = Material,
-        description = 'Select the bin rim segmentation material',
-        update = update_seg_colors
-    ) 
-
-    grease_mat: PointerProperty(
-        name = 'Grease',
-        type = Material,
-        description = 'Select the grease segmentation material',
-        update = update_seg_colors
-    ) 
-
-    bin_interior: FloatVectorProperty(
-        name="Bin Interior Color",
-        subtype='COLOR',
-        default=(0.0, 0.0, 1.0),  
-        min=0.0, max=1.0,
-        description="Select the color for the bin interior",
-        update=update_seg_material_colors
-    )
-
-    bin_exterior: FloatVectorProperty(
-        name="Bin Exterior Color",
-        subtype='COLOR',
-        default=(0.0, 1.0, 1.0),  
-        min=0.0, max=1.0,
-        description="Select the color for the bin exterior",
-        update=update_seg_material_colors
-    )
-
-    bin_rim: FloatVectorProperty(
-        name="Bin Rim Color",
-        subtype='COLOR',
-        default=(1.0, 0.0, 0.0),  
-        min=0.0, max=1.0,
-        description="Select the color for the bin rim",
-        update=update_seg_material_colors
-    )
-
-    grease: FloatVectorProperty(
-        name="Grease Color",
-        subtype='COLOR',
-        default=(1.0, 1.0, 0.0),  
-        min=0.0, max=1.0,
-        description="Select the color for the grease",
-        update=update_seg_material_colors
-    )
-
-class MaterialElements(PropertyGroup):
-    bin_int_mat: PointerProperty(
-        name = 'Interior',
-        type = Material,
-        description = 'Select the bin interior material'
-    ) 
-
-    bin_ext_mat: PointerProperty(
-        name = 'Exterior',
-        type = Material,
-        description = 'Select the bin exterior material'
-    ) 
-
-    grease_mat: PointerProperty(
-        name = 'Grease',
-        type = Material,
-        description = 'Select the grease material'
-    ) 
-
-    grease_group: bpy.props.StringProperty(
-        name="Group",
-        description="Select the grease node group"
-    ) 
-
-    bin_ext_group: bpy.props.StringProperty(
-        name="Group",
-        description="Select the bin node group"
-    ) 
-
-    bin_int_group: bpy.props.StringProperty(
-        name="Group",
-        description="Select the bin node group"
     ) 
 
 class ParameterSettingsElements(PropertyGroup):
