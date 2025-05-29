@@ -3,17 +3,20 @@ import os
 import glob
 import math
 import json
+import random
 
 from bpy.types import Scene, Object, Context, Collection
 from enum import Enum
 from typing import Self
 from random import sample
 
-class FrameType(Enum):
-    MASK = 'mask'
-    RAW = 'raw'
 
-class RenderConfig():
+class FrameType(Enum):
+    MASK = "mask"
+    RAW = "raw"
+
+
+class RenderConfig:
     def __init__(self, scene: Scene):
         mat_props = scene.material_elements
         param_props = scene.parameter_settings_elements
@@ -40,8 +43,8 @@ class RenderConfig():
         self.directory: str = bpy.path.abspath(render_props.directory)
         self.dataset_name: str = render_props.dataset_name
         self.dataset_folder: str = os.path.join(self.directory, self.dataset_name)
-        self.mask_dir: str = os.path.join(self.dataset_folder, 'masks')
-        self.image_dir: str = os.path.join(self.dataset_folder, 'images')
+        self.mask_dir: str = os.path.join(self.dataset_folder, "masks")
+        self.image_dir: str = os.path.join(self.dataset_folder, "images")
         self.sequence_setting: int = int(render_props.render_sequence)
         self.mask_prefix: str = render_props.mask_prefix
         self.image_prefix: str = render_props.image_prefix
@@ -52,71 +55,88 @@ class RenderConfig():
 
         # Segmentation colors
         self.segmentation_colors: dict[str, tuple[int]] = {
-            'background': (0,0,0),
-            'bin_interior': tuple(seg_props.bin_interior),
-            'bin_exterior': tuple(seg_props.bin_exterior),
-            'bin_rim': tuple(seg_props.bin_rim),
-            'grease': tuple(seg_props.grease)
+            "background": (0, 0, 0),
+            "bin_interior": tuple(seg_props.bin_interior),
+            "bin_exterior": tuple(seg_props.bin_exterior),
+            "bin_rim": tuple(seg_props.bin_rim),
+            "grease": tuple(seg_props.grease),
         }
 
         # Material Colors
         self.material_colors: dict[str, tuple[int]] = {
-            'bin_interior': {
-                socket.name: socket.default_value \
-                    for socket in mat_props.bin_int_mat.node_tree.nodes[mat_props.bin_int_group].inputs
+            "bin_interior": {
+                socket.name: socket.default_value
+                for socket in mat_props.bin_int_mat.node_tree.nodes[
+                    mat_props.bin_int_group
+                ].inputs
             },
-            'bin_exterior': {
-                socket.name: socket.default_value \
-                    for socket in mat_props.bin_ext_mat.node_tree.nodes[mat_props.bin_ext_group].inputs
+            "bin_exterior": {
+                socket.name: socket.default_value
+                for socket in mat_props.bin_ext_mat.node_tree.nodes[
+                    mat_props.bin_ext_group
+                ].inputs
             },
-            'grease': {
-                socket.name: socket.default_value \
-                    for socket in mat_props.grease_mat.node_tree.nodes[mat_props.grease_group].inputs \
-                    if isinstance(socket.default_value, float)
-            }
+            "grease": {
+                socket.name: socket.default_value[:3]
+                for socket in mat_props.grease_mat.node_tree.nodes[
+                    mat_props.grease_group
+                ].inputs
+                # if isinstance(socket.default_value, float)
+            },
         }
+
+        print(self.material_colors["grease"])
 
     def dump_json(self) -> dict:
         seg_colors: dict[str, tuple[int]] = {
-            key: [int(i*255) for i in value] for key, value in self.segmentation_colors.items()
+            key: [int(i * 255) for i in value]
+            for key, value in self.segmentation_colors.items()
         }
 
         metadata = {
-            'dataset_name': self.dataset_name,
-            'liquid_levels': [i for i in range(0, 101, self.liquid_level_step)],
-            'azimuth_step': self.azimuth_step,
-            'elevation_step': self.elevation_step,
-            'max_elevation': self.max_elevation,
-            'focal_length': self.focal_length,
-            'starting_zoom': self.starting_zoom,
-            'zoom_step': self.zoom_step,
-            'zoom_levels': self.zoom_levels,
-
-            'color_data': {
-                'segmentation_colors': seg_colors,
-                'material_settings': self.material_colors
+            "dataset_name": self.dataset_name,
+            "liquid_levels": [i for i in range(0, 101, self.liquid_level_step)],
+            "azimuth_step": self.azimuth_step,
+            "elevation_step": self.elevation_step,
+            "max_elevation": self.max_elevation,
+            "focal_length": self.focal_length,
+            "starting_zoom": self.starting_zoom,
+            "zoom_step": self.zoom_step,
+            "zoom_levels": self.zoom_levels,
+            "color_data": {
+                "segmentation_colors": seg_colors,
+                "material_settings": self.material_colors,
             },
-
-            'image_data': {
-                'width': self.width,
-                'height': self.height,
-                'sample_amount': self.sample_amount,
-                'mask_prefix': self.mask_prefix,
-                'image_prefix': self.image_prefix
-            }
+            "image_data": {
+                "width": self.width,
+                "height": self.height,
+                "sample_amount": self.sample_amount,
+                "mask_prefix": self.mask_prefix,
+                "image_prefix": self.image_prefix,
+            },
         }
 
         return metadata
 
-class FrameData():
+
+class FrameData:
     __camera: Object = None
     __camera_track: Object = None
     __bin_cutter: Object = None
     __seg_cutter: Object = None
     __grease: Object = None
     __bin_cutter_location: float = 0
+    __mat_props = None
 
-    def __init__(self, scene: Scene, cfg: RenderConfig, azimuth: int=0, elevation: int=0, zoom: float=1.0, liquid_level: int=100):
+    def __init__(
+        self,
+        scene: Scene,
+        cfg: RenderConfig,
+        azimuth: int = 0,
+        elevation: int = 0,
+        zoom: float = 1.0,
+        liquid_level: int = 100,
+    ):
         self.__scene = scene
         self.__azimuth = azimuth
         self.__elevation = elevation
@@ -124,14 +144,20 @@ class FrameData():
         self.__liquid_level = liquid_level
         self.__cfg = cfg
 
+        colors_path = os.path.join(os.path.dirname(__file__), "colors.json")
+        with open(colors_path, "r") as f:
+            self.__colors = json.load(f)["colors"]
+
         self.__get_scene_objects()
 
     def generate_keyframe(self, frame_num: int):
         # Setting elevation
-        self.__camera.constraints["Follow Path"].offset_factor = 0.25 + self.__elevation/360
+        self.__camera.constraints["Follow Path"].offset_factor = (
+            0.25 + self.__elevation / 360
+        )
 
         # Setting azimuth
-        self.__camera_track.rotation_mode = 'XYZ'
+        self.__camera_track.rotation_mode = "XYZ"
         self.__camera_track.rotation_euler[2] = math.radians(self.__azimuth)
 
         # Setting zoom
@@ -143,26 +169,86 @@ class FrameData():
         self.__seg_cutter.location.z = self.__bin_cutter_location
 
         # Add keyframes for all objects
-        self.__camera.constraints["Follow Path"].keyframe_insert(data_path="offset_factor", frame=frame_num)
-        self.__camera_track.keyframe_insert(data_path="rotation_euler", index=2, frame=frame_num)
+        self.__camera.constraints["Follow Path"].keyframe_insert(
+            data_path="offset_factor", frame=frame_num
+        )
+        self.__camera_track.keyframe_insert(
+            data_path="rotation_euler", index=2, frame=frame_num
+        )
         self.__camera_track.keyframe_insert(data_path="scale", frame=frame_num)
-        self.__bin_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
-        self.__seg_cutter.keyframe_insert(data_path="location", index=2, frame=frame_num)
+        self.__bin_cutter.keyframe_insert(
+            data_path="location", index=2, frame=frame_num
+        )
+        self.__seg_cutter.keyframe_insert(
+            data_path="location", index=2, frame=frame_num
+        )
+
+        # Grease keyframes
+        print(self.__colors)
+        selected_sample = random.randint(0, len(self.__colors) - 1)
+        first_color = self.__colors[selected_sample][
+            random.randint(0, len(self.__colors[selected_sample]) - 1)
+        ]
+        second_color = self.__colors[selected_sample][
+            random.randint(0, len(self.__colors[selected_sample]) - 1)
+        ]
+        self.__generate_grease_color_keyframe(frame_num, first_color, second_color)
+
+    def __generate_grease_color_keyframe(
+        self, frame_num: int, first_color: tuple[float], second_color: tuple[float]
+    ):
+        # Keyframe for grease material
+        # --- Add keyframes for each color input in grease_mat node tree ---
+        grease_mat = self.__mat_props.grease_mat
+        group_name = self.__mat_props.grease_group  # The node group name, if needed
+
+        if grease_mat and grease_mat.use_nodes:
+            node_tree = grease_mat.node_tree
+            # Find the node by name (if you know it), or iterate all nodes
+            node = (
+                node_tree.nodes.get(group_name)
+                if group_name in node_tree.nodes
+                else None
+            )
+            if node:
+                node.inputs[0].default_value = (
+                    first_color[0] / 255.0,
+                    first_color[1] / 255.0,
+                    first_color[2] / 255.0,
+                    1.0,
+                )
+                node.inputs[0].keyframe_insert(
+                    data_path="default_value", frame=frame_num
+                )
+
+                node.inputs[1].default_value = (
+                    second_color[0] / 255.0,
+                    second_color[1] / 255.0,
+                    second_color[2] / 255.0,
+                    1.0,
+                )
+                node.inputs[1].keyframe_insert(
+                    data_path="default_value", frame=frame_num
+                )
 
     def __get_scene_objects(self):
         objects: dict[str, Object] = get_objects(self.__scene)
-        self.__camera = objects['camera']
-        self.__camera_track = objects['camera_track']
-        self.__bin_cutter = objects['bin_cutter']
-        self.__seg_cutter = objects['seg_cutter']
-        self.__grease = objects['grease']
-        self.__bin_cutter_location = self.__grease.dimensions.z*(self.__liquid_level*.01)
+        self.__camera = objects["camera"]
+        self.__camera_track = objects["camera_track"]
+        self.__bin_cutter = objects["bin_cutter"]
+        self.__seg_cutter = objects["seg_cutter"]
+        self.__grease = objects["grease"]
+        self.__bin_cutter_location = self.__grease.dimensions.z * (
+            self.__liquid_level * 0.01
+        )
+        self.__mat_props = self.__scene.material_elements
 
     def __repr__(self) -> str:
-        return f'Frame: <Azimuth: {self.__azimuth}, Elevation: {self.__elevation}, Zoom: {self.__zoom}, Liquid Level: {self.__liquid_level}>'
+        return f"Frame: <Azimuth: {self.__azimuth}, Elevation: {self.__elevation}, Zoom: {self.__zoom}, Liquid Level: {self.__liquid_level}>"
 
-class RenderQueue():
-    def __init__(self, items: FrameData=[]):
+
+class RenderQueue:
+    def __init__(self, items: FrameData = []):
         self.__queue: list[FrameData] = []
         self.__length: int = 0
         self.__max_len: int = 0
@@ -189,16 +275,16 @@ class RenderQueue():
 
             return curr_frame
         else:
-            raise IndexError('This RenderQueue does not have any items.')
-    
+            raise IndexError("This RenderQueue does not have any items.")
+
     def max_length(self) -> int:
         return self.__max_len
-    
-    def random_subset(self, size: float=0.5) -> Self:
+
+    def random_subset(self, size: float = 0.5) -> Self:
         if size > 1 or size < 0:
-            raise ValueError('Size must be between 0 and 1.')
-        
-        subset_size: int = int(self.max_length()*size)
+            raise ValueError("Size must be between 0 and 1.")
+
+        subset_size: int = int(self.max_length() * size)
         subset: list[FrameData] = sample(self.__queue, subset_size)
 
         subset_queue: RenderQueue = RenderQueue(items=subset)
@@ -207,24 +293,27 @@ class RenderQueue():
 
     def __getitem__(self, i: int) -> FrameData:
         return self.__queue[i]
-        
+
     def __len__(self) -> int:
         return self.__length
-    
-    def __repr__(self) -> str:
-        repr_str: str = '['
-        for i in self.__queue:
-            repr_str += f'{i}, '
 
-        repr_str = repr_str.removesuffix(', ')
-        repr_str += ']'
+    def __repr__(self) -> str:
+        repr_str: str = "["
+        for i in self.__queue:
+            repr_str += f"{i}, "
+
+        repr_str = repr_str.removesuffix(", ")
+        repr_str += "]"
         return repr_str
-    
-class AnimationSequence():
+
+
+class AnimationSequence:
     def __init__(self, ctx: Context, frames: RenderQueue):
         self.__scene: Scene = ctx.scene
         self.__cfg: RenderConfig = RenderConfig(self.__scene)
-        self.temp_save_path: str = os.path.join(self.__cfg.dataset_folder, 'temp_render')
+        self.temp_save_path: str = os.path.join(
+            self.__cfg.dataset_folder, "temp_render"
+        )
 
         self.__generate_keyframes(ctx, frames)
 
@@ -232,7 +321,7 @@ class AnimationSequence():
         self.__setup_engine(frame_type)
         self.__scene.render.filepath = self.temp_save_path
 
-        bpy.ops.render.render('INVOKE_DEFAULT', animation=True, write_still=False)
+        bpy.ops.render.render("INVOKE_DEFAULT", animation=True, write_still=False)
 
     def save_frame(self, frame_type: FrameType):
         frame: int = self.__scene.frame_current
@@ -244,19 +333,23 @@ class AnimationSequence():
 
         match frame_type:
             case FrameType.MASK:
-                path: str = os.path.join(self.__cfg.mask_dir, f'{self.__cfg.mask_prefix}_{frame:08d}.png')
+                path: str = os.path.join(
+                    self.__cfg.mask_dir, f"{self.__cfg.mask_prefix}_{frame:08d}.png"
+                )
                 render_result.save_render(filepath=path)
             case FrameType.RAW:
-                path: str = os.path.join(self.__cfg.image_dir, f'{self.__cfg.image_prefix}_{frame:08d}.png')
+                path: str = os.path.join(
+                    self.__cfg.image_dir, f"{self.__cfg.image_prefix}_{frame:08d}.png"
+                )
                 render_result.save_render(filepath=path)
 
     def cleanup(self):
-        for f in glob.glob(f'{self.temp_save_path}*.png'):
+        for f in glob.glob(f"{self.temp_save_path}*.png"):
             os.remove(f)
 
     def create_metadata(self):
         metadata: dict = self.__cfg.dump_json()
-        with open(os.path.join(self.__cfg.dataset_folder, 'metadata.json'), 'w') as f:
+        with open(os.path.join(self.__cfg.dataset_folder, "metadata.json"), "w") as f:
             json.dump(metadata, f, indent=4)
 
     def __generate_keyframes(self, ctx: Context, frames: RenderQueue):
@@ -276,12 +369,12 @@ class AnimationSequence():
 
         ctx.scene.gb_data.keyframes_generated = True
 
-    def __setup_engine(self, frame_type: FrameType):    
+    def __setup_engine(self, frame_type: FrameType):
         objects: dict[str, Object] = get_objects(self.__scene)
-        rgb_bin_collection: Collection = objects['rgb_bin']
-        seg_bin_collection: Collection = objects['seg_bin']
+        rgb_bin_collection: Collection = objects["rgb_bin"]
+        seg_bin_collection: Collection = objects["seg_bin"]
 
-        self.__scene.render.engine = 'CYCLES'
+        self.__scene.render.engine = "CYCLES"
 
         self.__scene.frame_current = 1
         self.__scene.render.resolution_x = self.__cfg.width
@@ -289,28 +382,28 @@ class AnimationSequence():
 
         # Enable emmision pass; Used for masks
         self.__scene.view_layers["ViewLayer"].use_pass_emit = True
-        
-        if frame_type == FrameType.RAW: # Settings for rendering RGB images
+
+        if frame_type == FrameType.RAW:  # Settings for rendering RGB images
             # Set samples, time limit, dithering, and anti-aliasing
             self.__scene.cycles.samples = self.__cfg.sample_amount
             self.__scene.cycles.time_limit = 60
             self.__scene.cycles.filter_width = 1.5
             self.__scene.render.dither_intensity = 1.0
-            
+
             # Enable denoising and adaptive sampling ('noise threshold')
             self.__scene.cycles.use_denoising = True
             self.__scene.cycles.use_adaptive_sampling = True
 
             # Change color profile to one that adds color grading
-            self.__scene.view_settings.view_transform = 'AgX'
+            self.__scene.view_settings.view_transform = "AgX"
 
             # Setup render visibility
             rgb_bin_collection.hide_render = False
             seg_bin_collection.hide_render = True
 
             # Setup compositor
-            self.__scene.node_tree.nodes['Switch'].check = False
-        else: # Settings for rendering seg masks
+            self.__scene.node_tree.nodes["Switch"].check = False
+        else:  # Settings for rendering seg masks
             # Lower samples, set time limit to 0, and disable anti-aliasing and dithering
             self.__scene.cycles.samples = 1
             self.__scene.cycles.time_limit = 0
@@ -322,60 +415,62 @@ class AnimationSequence():
             self.__scene.cycles.use_adaptive_sampling = False
 
             # Change color profile to one which doesn't change the colors
-            self.__scene.view_settings.view_transform = 'Raw'
+            self.__scene.view_settings.view_transform = "Raw"
 
             # Setup render visibility
             rgb_bin_collection.hide_render = True
             seg_bin_collection.hide_render = False
 
             # Setup compositor
-            self.__scene.node_tree.nodes['Switch'].check = True
+            self.__scene.node_tree.nodes["Switch"].check = True
+
 
 def get_objects(scene: Scene) -> dict[str, Object | Collection]:
     object_selection_props = scene.object_selection_elements
     objects = {
-        'camera':       object_selection_props.camera,
-        'camera_track': object_selection_props.camera_track,
-        'bin_cutter':   object_selection_props.bin_cutter,
-        'seg_cutter':   object_selection_props.seg_bin_cutter,
-        'grease':       object_selection_props.grease,
-        'rgb_bin':      object_selection_props.rgb_bin,
-        'seg_bin':      object_selection_props.seg_bin
+        "camera": object_selection_props.camera,
+        "camera_track": object_selection_props.camera_track,
+        "bin_cutter": object_selection_props.bin_cutter,
+        "seg_cutter": object_selection_props.seg_bin_cutter,
+        "grease": object_selection_props.grease,
+        "rgb_bin": object_selection_props.rgb_bin,
+        "seg_bin": object_selection_props.seg_bin,
     }
-    
+
     # Object Validation
-    if(objects['camera'] is None or objects['camera'].type != 'CAMERA'):
-        objects['camera'] = None
-        raise Exception('Invalid camera object. Please pick a camera in the scene.')
-    elif(objects['camera_track'] is None or objects['camera_track'].type != 'CURVE'):
-        objects['camera_track'] = None
-        raise Exception('Invalid camera track object. Please pick a curve object.')
-    elif(objects['bin_cutter'] is None or objects['bin_cutter'].type != 'MESH'):
-        objects['bin_cutter'] = None
-        raise Exception('Invalid bin cutter object. Please pick a mesh object.')
-    elif(objects['seg_cutter'] is None or objects['bin_cutter'].type != 'MESH'):
-        objects['seg_cutter'] = None
-        raise Exception('Invalid bin cutter object. Please pick a mesh object.')
-    elif(objects['grease'] is None or objects['grease'].type != 'MESH'):
-        objects['grease'] = None
-        raise Exception('Invalid grease object. Please pick a mesh object.')
-    elif(objects['rgb_bin'] is None):
-        objects['rgb_bin'] = None
-        raise Exception('Invalid RGB bin collection. Please pick a valid collection.')
-    elif(objects['seg_cutter'] is None):
-        objects['seg_cutter'] = None
-        raise Exception('Invalid SEG bin collection. Please pick a valid collection.')
-    
+    if objects["camera"] is None or objects["camera"].type != "CAMERA":
+        objects["camera"] = None
+        raise Exception("Invalid camera object. Please pick a camera in the scene.")
+    elif objects["camera_track"] is None or objects["camera_track"].type != "CURVE":
+        objects["camera_track"] = None
+        raise Exception("Invalid camera track object. Please pick a curve object.")
+    elif objects["bin_cutter"] is None or objects["bin_cutter"].type != "MESH":
+        objects["bin_cutter"] = None
+        raise Exception("Invalid bin cutter object. Please pick a mesh object.")
+    elif objects["seg_cutter"] is None or objects["bin_cutter"].type != "MESH":
+        objects["seg_cutter"] = None
+        raise Exception("Invalid bin cutter object. Please pick a mesh object.")
+    elif objects["grease"] is None or objects["grease"].type != "MESH":
+        objects["grease"] = None
+        raise Exception("Invalid grease object. Please pick a mesh object.")
+    elif objects["rgb_bin"] is None:
+        objects["rgb_bin"] = None
+        raise Exception("Invalid RGB bin collection. Please pick a valid collection.")
+    elif objects["seg_cutter"] is None:
+        objects["seg_cutter"] = None
+        raise Exception("Invalid SEG bin collection. Please pick a valid collection.")
+
     # Constraint Validation
-    try: 
-        objects['camera'].constraints["Follow Path"].use_fixed_location = True
-        objects['camera'].constraints["Follow Path"].use_curve_follow = True
-        objects['camera'].constraints["Follow Path"].use_curve_radius = True
-        objects['camera'].constraints["Follow Path"].target = objects['camera_track']
+    try:
+        objects["camera"].constraints["Follow Path"].use_fixed_location = True
+        objects["camera"].constraints["Follow Path"].use_curve_follow = True
+        objects["camera"].constraints["Follow Path"].use_curve_radius = True
+        objects["camera"].constraints["Follow Path"].target = objects["camera_track"]
     except Exception as _:
-        raise Exception("Please add a \"Follow Path\" constraint onto the camera.")
-    
+        raise Exception('Please add a "Follow Path" constraint onto the camera.')
+
     return objects
+
 
 def create_frames(scene: Scene) -> RenderQueue:
     cfg: RenderConfig = RenderConfig(scene)
@@ -392,7 +487,7 @@ def create_frames(scene: Scene) -> RenderQueue:
     # Loop variables
     frames: RenderQueue = RenderQueue()
 
-    max_zoom: float = cfg.starting_zoom + (cfg.zoom_levels - 1)*cfg.zoom_step
+    max_zoom: float = cfg.starting_zoom + (cfg.zoom_levels - 1) * cfg.zoom_step
 
     curr_zoom: float = cfg.starting_zoom
     curr_azimuth: int = cfg.starting_elevation
@@ -405,7 +500,14 @@ def create_frames(scene: Scene) -> RenderQueue:
         while curr_zoom <= max_zoom:
             while curr_elevation <= cfg.max_elevation:
                 while curr_azimuth < 360:
-                    frame_data: FrameData = FrameData(scene, cfg, curr_azimuth, curr_elevation, curr_zoom, liquid_level)
+                    frame_data: FrameData = FrameData(
+                        scene,
+                        cfg,
+                        curr_azimuth,
+                        curr_elevation,
+                        curr_zoom,
+                        liquid_level,
+                    )
                     frames.add(frame_data)
 
                     curr_azimuth += cfg.azimuth_step
@@ -424,8 +526,8 @@ def create_frames(scene: Scene) -> RenderQueue:
     if cfg.subset_size < 1.0:
         frames = frames.random_subset(cfg.subset_size)
 
-    print(f'{frames=}')
+    # print(f'{frames=}')
 
-    print(f'Rendering {len(frames)} frames.')
-        
+    print(f"Rendering {len(frames)} frames.")
+
     return frames
